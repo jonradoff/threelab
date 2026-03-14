@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Go binary
+backend/threelab-server
+
+# Environment
+.env
+.env.*
+*.local
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.sw?
