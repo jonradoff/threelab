@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as api from '../api/client'
 import useStore from '../store/useStore'
 import type { Scene } from '../types/genome'
+import { getPatternLabel } from '../patterns/PatternRegistry'
 
 type SortMode = 'newest' | 'rating' | 'popularity' | 'oldest'
 
@@ -135,7 +136,7 @@ export default function Gallery() {
                     ) : (
                       <div className="text-[10px] text-gray-600">
                         {scene.genome.layers
-                          .map((l) => l.patternType)
+                          .map((l) => getPatternLabel(l.patternType))
                           .join(', ') || 'empty'}
                       </div>
                     )}

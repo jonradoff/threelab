@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import useStore from '../store/useStore'
 import PatternPicker from './PatternPicker'
-import { getAllPatternTypes, getDefaultParams, getDefaultCameraDistance } from '../patterns/PatternRegistry'
+import { getAllPatternTypes, getDefaultParams, getDefaultCameraDistance, getPatternLabel } from '../patterns/PatternRegistry'
 import type { ParameterSchema } from '../types/genome'
 
 function randomHexColor(): string {
@@ -19,6 +19,7 @@ export default function LayerPanel() {
   const reorderLayers = useStore((s) => s.reorderLayers)
   const setScene = useStore((s) => s.setScene)
   const patternSchemas = useStore((s) => s.patternSchemas)
+  const resetAnimation = useStore((s) => s.resetAnimation)
   const [showPicker, setShowPicker] = useState(false)
 
   if (!currentScene) return null
@@ -27,9 +28,11 @@ export default function LayerPanel() {
 
   const randomizeEverything = () => {
     const allTypes = getAllPatternTypes()
-    if (allTypes.length === 0) return
+    // Only use pattern-editor-derived (node graph) patterns
+    const nodeGraphTypes = allTypes.filter((t) => t.isNodeGraph)
+    if (nodeGraphTypes.length === 0) return
 
-    const chosen = allTypes[Math.floor(Math.random() * allTypes.length)]
+    const chosen = nodeGraphTypes[Math.floor(Math.random() * nodeGraphTypes.length)]
     const defaults = getDefaultParams(chosen.type)
     const chosenSchema = patternSchemas[chosen.type]
 
@@ -98,13 +101,20 @@ export default function LayerPanel() {
     <>
       <div className="glass-panel absolute top-14 left-3 w-56 rounded-lg overflow-hidden z-40">
         {/* Surprise Me — random pattern + random params */}
-        <div className="px-3 py-2 border-b border-white/5">
+        <div className="px-3 py-2 border-b border-white/5 flex gap-2">
           <button
             onClick={randomizeEverything}
-            className="w-full py-2 text-sm font-bold text-black bg-gradient-to-r from-cyan-400 to-purple-500 rounded hover:from-cyan-300 hover:to-purple-400 transition-all active:scale-95"
+            className="flex-1 py-2 text-sm font-bold text-black bg-gradient-to-r from-cyan-400 to-purple-500 rounded hover:from-cyan-300 hover:to-purple-400 transition-all active:scale-95"
             title="Pick a random pattern with random settings"
           >
             Surprise Me
+          </button>
+          <button
+            onClick={resetAnimation}
+            className="px-2 py-2 text-sm rounded bg-white/10 text-gray-400 hover:bg-white/15 hover:text-gray-200 transition-all active:scale-95"
+            title="Replay animation from the beginning"
+          >
+            {'\u21BA'}
           </button>
         </div>
 
@@ -149,7 +159,7 @@ export default function LayerPanel() {
                 </button>
 
                 <span className="text-xs text-gray-300 flex-1 truncate">
-                  {layer.patternType}
+                  {getPatternLabel(layer.patternType)}
                 </span>
 
                 {/* Reorder */}

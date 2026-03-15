@@ -6,16 +6,22 @@ import type {
   PatternSchema,
   User,
 } from '../types/genome'
+import * as api from '../api/client'
 
 export interface Favorite {
   id: string
   patternType: string
   params: Record<string, unknown>
   cameraDistance: number
+  cameraAzimuth?: number
+  cameraPolar?: number
+  cameraTargetX?: number
+  cameraTargetY?: number
+  cameraTargetZ?: number
   createdAt: string
 }
 
-function loadFavorites(): Favorite[] {
+function loadFavoritesCache(): Favorite[] {
   try {
     const raw = localStorage.getItem('threelab_favorites')
     return raw ? JSON.parse(raw) : []
@@ -24,7 +30,7 @@ function loadFavorites(): Favorite[] {
   }
 }
 
-function saveFavorites(favs: Favorite[]) {
+function saveFavoritesCache(favs: Favorite[]) {
   localStorage.setItem('threelab_favorites', JSON.stringify(favs))
 }
 
@@ -38,6 +44,8 @@ interface ThreelabState {
   favorites: Favorite[]
   favoritesViewIndex: number
   browseFavorites: boolean
+  animationResetCounter: number
+  fullscreen: boolean
 
   setScene: (scene: Scene | null) => void
   updateLayer: (index: number, updates: Partial<Layer>) => void
@@ -55,18 +63,23 @@ interface ThreelabState {
   removeFavorite: (id: string) => void
   setFavoritesViewIndex: (index: number) => void
   setBrowseFavorites: (on: boolean) => void
+  resetAnimation: () => void
+  toggleFullscreen: () => void
+  syncFavorites: () => void
 }
 
-const useStore = create<ThreelabState>((set) => ({
+const useStore = create<ThreelabState>((set, get) => ({
   currentScene: null,
   selectedLayerIndex: 0,
   isModified: false,
   patternSchemas: {},
   authToken: localStorage.getItem('threelab_token'),
   user: null,
-  favorites: loadFavorites(),
+  favorites: loadFavoritesCache(),
   favoritesViewIndex: 0,
   browseFavorites: false,
+  animationResetCounter: 0,
+  fullscreen: false,
 
   setScene: (scene) =>
     set({
@@ -196,22 +209,47 @@ const useStore = create<ThreelabState>((set) => ({
 
   markSaved: () => set({ isModified: false }),
 
-  addFavorite: (fav) =>
+  addFavorite: (fav) => {
+    // Optimistic local update with temp ID
+    const tempId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const newFav: Favorite = {
+      ...fav,
+      id: tempId,
+      createdAt: new Date().toISOString(),
+    }
     set((state) => {
-      const newFav: Favorite = {
-        ...fav,
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        createdAt: new Date().toISOString(),
-      }
       const updated = [...state.favorites, newFav]
-      saveFavorites(updated)
+      saveFavoritesCache(updated)
       return { favorites: updated }
-    }),
+    })
 
-  removeFavorite: (id) =>
+    // Persist to API, replace temp ID with server ID
+    api.addFavorite({
+      patternType: fav.patternType,
+      params: fav.params,
+      cameraDistance: fav.cameraDistance,
+      cameraAzimuth: fav.cameraAzimuth ?? 0,
+      cameraPolar: fav.cameraPolar ?? 90,
+      cameraTargetX: fav.cameraTargetX ?? 0,
+      cameraTargetY: fav.cameraTargetY ?? 0,
+      cameraTargetZ: fav.cameraTargetZ ?? 0,
+    }).then((serverFav) => {
+      set((state) => {
+        const updated = state.favorites.map((f) =>
+          f.id === tempId ? { ...f, id: serverFav.id } : f,
+        )
+        saveFavoritesCache(updated)
+        return { favorites: updated }
+      })
+    }).catch(() => {
+      // API failed — keep local version
+    })
+  },
+
+  removeFavorite: (id) => {
     set((state) => {
       const updated = state.favorites.filter((f) => f.id !== id)
-      saveFavorites(updated)
+      saveFavoritesCache(updated)
       return {
         favorites: updated,
         favoritesViewIndex: Math.min(
@@ -219,11 +257,48 @@ const useStore = create<ThreelabState>((set) => ({
           Math.max(0, updated.length - 1),
         ),
       }
-    }),
+    })
+
+    // Persist to API
+    api.deleteFavorite(id).catch(() => {
+      // API failed — local already updated
+    })
+  },
 
   setFavoritesViewIndex: (index) => set({ favoritesViewIndex: index }),
 
   setBrowseFavorites: (on) => set({ browseFavorites: on, favoritesViewIndex: 0 }),
+
+  resetAnimation: () =>
+    set((state) => ({ animationResetCounter: state.animationResetCounter + 1 })),
+
+  toggleFullscreen: () =>
+    set((state) => ({ fullscreen: !state.fullscreen })),
+
+  // Fetch favorites from API and reconcile with local cache
+  syncFavorites: () => {
+    api.listFavorites().then((serverFavs) => {
+      const favorites: Favorite[] = serverFavs.map((f) => ({
+        id: f.id,
+        patternType: f.patternType,
+        params: f.params,
+        cameraDistance: f.cameraDistance,
+        cameraAzimuth: f.cameraAzimuth,
+        cameraPolar: f.cameraPolar,
+        cameraTargetX: f.cameraTargetX,
+        cameraTargetY: f.cameraTargetY,
+        cameraTargetZ: f.cameraTargetZ,
+        createdAt: f.createdAt,
+      }))
+      saveFavoritesCache(favorites)
+      set({ favorites })
+    }).catch(() => {
+      // API unavailable — keep local cache
+    })
+  },
 }))
+
+// Sync favorites from server on app init
+useStore.getState().syncFavorites()
 
 export default useStore

@@ -9,12 +9,14 @@ import (
 
 // DB holds references to MongoDB collections used by all handlers.
 type DB struct {
-	Scenes     *mongo.Collection
-	Users      *mongo.Collection
-	Presets    *mongo.Collection
-	Evolution  *mongo.Collection
-	Shares     *mongo.Collection
-	JWTSecret  string
+	Scenes          *mongo.Collection
+	Users           *mongo.Collection
+	Presets         *mongo.Collection
+	Evolution       *mongo.Collection
+	Shares          *mongo.Collection
+	Favorites       *mongo.Collection
+	FavoritesShares *mongo.Collection
+	JWTSecret       string
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

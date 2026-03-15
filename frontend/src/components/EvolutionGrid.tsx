@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useStore from '../store/useStore'
 import * as api from '../api/client'
 import type { Scene } from '../types/genome'
+import { getPatternLabel } from '../patterns/PatternRegistry'
 
 export default function EvolutionGrid() {
   const currentScene = useStore((s) => s.currentScene)
@@ -166,7 +167,7 @@ export default function EvolutionGrid() {
                     {c.lineage.generation}
                   </div>
                   <div className="text-[10px] text-gray-600 mt-1">
-                    {c.genome.layers.map((l) => l.patternType).join(', ')}
+                    {c.genome.layers.map((l) => getPatternLabel(l.patternType)).join(', ')}
                   </div>
                 </button>
               ))}

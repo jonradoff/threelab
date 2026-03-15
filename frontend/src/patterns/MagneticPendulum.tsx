@@ -68,7 +68,7 @@ void main() {
   int settledMagnet = -1;
   int settleTime = maxIterations;
 
-  for (int i = 0; i < 500; i++) {
+  for (int i = 0; i < 200; i++) {
     if (i >= maxIterations) break;
 
     vec2 force = vec2(0.0);
@@ -76,14 +76,22 @@ void main() {
     // Central gravity (restoring force pulling pendulum toward center)
     force -= gravity * pos;
 
-    // Magnetic attraction
+    // Magnetic attraction + settle check in single pass
+    float speed2 = dot(vel, vel);
     for (int m = 0; m < 6; m++) {
       if (m >= magnetCount) break;
       vec2 diff = magnets[m] - pos;
-      float dist2 = dot(diff, diff) + h2;
-      float dist3 = dist2 * sqrt(dist2);
-      force += magnetStrength * diff / dist3;
+      float dist2 = dot(diff, diff);
+      // Settle check (reuse diff/dist2 computed for attraction)
+      if (dist2 < settleThreshold && speed2 < settleThreshold * 0.1) {
+        settledMagnet = m;
+        settleTime = i;
+      }
+      float d2h = dist2 + h2;
+      float invDist3 = inversesqrt(d2h) / d2h;
+      force += magnetStrength * diff * invDist3;
     }
+    if (settledMagnet >= 0) break;
 
     // Friction / damping
     force -= friction * vel;
@@ -91,20 +99,6 @@ void main() {
     // Integrate (Euler)
     vel += force * dt;
     pos += vel * dt;
-
-    // Check if settled near a magnet
-    float speed2 = dot(vel, vel);
-    for (int m = 0; m < 6; m++) {
-      if (m >= magnetCount) break;
-      vec2 diff = magnets[m] - pos;
-      float dist2 = dot(diff, diff);
-      if (dist2 < settleThreshold && speed2 < settleThreshold * 0.1) {
-        settledMagnet = m;
-        settleTime = i;
-        break;
-      }
-    }
-    if (settledMagnet >= 0) break;
   }
 
   // If not settled, find nearest magnet
@@ -166,7 +160,7 @@ export default function MagneticPendulum({ params }: Props) {
   const friction = (params.friction as number) ?? 0.1
   const magnetStrength = (params.magnetStrength as number) ?? 1.0
   const gravity = (params.gravity as number) ?? 0.5
-  const maxIterations = (params.maxIterations as number) ?? 200
+  const maxIterations = Math.min((params.maxIterations as number) ?? 150, 200)
   const zoom = (params.zoom as number) ?? 1.0
   const centerX = (params.centerX as number) ?? 0.0
   const centerY = (params.centerY as number) ?? 0.0

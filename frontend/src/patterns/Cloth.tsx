@@ -259,9 +259,17 @@ function ClothInner({
     colAttr.needsUpdate = true
     geometry.computeVertexNormals()
 
-    // Slow rotation
-    if (groupRef.current && rotationSpeed > 0) {
-      groupRef.current.rotation.y = t * rotationSpeed
+    // Re-center the cloth by computing centroid and offsetting group
+    if (groupRef.current) {
+      let sumY = 0
+      for (let i = 0; i < particles.length; i++) sumY += particles[i].y
+      const avgY = sumY / particles.length
+      groupRef.current.position.y = -avgY
+
+      // Slow rotation
+      if (rotationSpeed > 0) {
+        groupRef.current.rotation.y = t * rotationSpeed
+      }
     }
 
     // Animate light

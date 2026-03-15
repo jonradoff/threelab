@@ -28,6 +28,7 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   })
 
   if (!res.ok) {
@@ -100,7 +101,7 @@ export function exportScene(
   const token = getToken()
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
-  return fetch(`${BASE_URL}/scenes/${id}/export?format=${format}`, { headers })
+  return fetch(`${BASE_URL}/scenes/${id}/export?format=${format}`, { headers, credentials: 'include' })
 }
 
 export function updateThumbnail(
@@ -239,6 +240,7 @@ export function generateAPIKey(): Promise<{ apiKey: string }> {
 export interface ShareLink {
   id: string
   code: string
+  name?: string
   patternType: string
   params: Record<string, unknown>
   cameraDistance: number
@@ -247,6 +249,7 @@ export interface ShareLink {
 }
 
 export function createShare(data: {
+  name?: string
   patternType: string
   params: Record<string, unknown>
   cameraDistance: number
@@ -259,6 +262,16 @@ export function createShare(data: {
 
 export function getShare(code: string): Promise<ShareLink> {
   return request<ShareLink>(`/shares/${code}`)
+}
+
+// Render tracking (fire-and-forget, no auth needed)
+export function reportRender(pattern: string): void {
+  fetch(`${BASE_URL}/renders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pattern }),
+    credentials: 'include',
+  }).catch(() => {}) // silently ignore failures
 }
 
 // Schemas
@@ -278,4 +291,53 @@ interface BackendPatternSchema {
 
 export function getPatternSchemas(): Promise<BackendPatternSchema[]> {
   return request<BackendPatternSchema[]>('/schemas')
+}
+
+// Favorites
+export interface ApiFavorite {
+  id: string
+  patternType: string
+  params: Record<string, unknown>
+  cameraDistance: number
+  cameraAzimuth?: number
+  cameraPolar?: number
+  cameraTargetX?: number
+  cameraTargetY?: number
+  cameraTargetZ?: number
+  createdAt: string
+}
+
+export function listFavorites(): Promise<ApiFavorite[]> {
+  return request<ApiFavorite[]>('/favorites')
+}
+
+export function addFavorite(fav: Omit<ApiFavorite, 'id' | 'createdAt'>): Promise<ApiFavorite> {
+  return request<ApiFavorite>('/favorites', {
+    method: 'POST',
+    body: JSON.stringify(fav),
+  })
+}
+
+export function deleteFavorite(id: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/favorites/${id}`, { method: 'DELETE' })
+}
+
+// Favorites sharing
+export interface FavoritesShareLink {
+  id: string
+  code: string
+  favorites: ApiFavorite[]
+  views: number
+  createdAt: string
+}
+
+export function createFavoritesShare(favorites: ApiFavorite[]): Promise<FavoritesShareLink> {
+  return request<FavoritesShareLink>('/favorites-shares', {
+    method: 'POST',
+    body: JSON.stringify({ favorites }),
+  })
+}
+
+export function getFavoritesShare(code: string): Promise<FavoritesShareLink> {
+  return request<FavoritesShareLink>(`/favorites-shares/${code}`)
 }

@@ -40,6 +40,7 @@ func contentHash(patternType string, params map[string]interface{}, cameraDistan
 // CreateShare creates a new share link or returns an existing one for the same configuration.
 func (db *DB) CreateShare(w http.ResponseWriter, r *http.Request) {
 	var body struct {
+		Name           string                 `json:"name"`
 		PatternType    string                 `json:"patternType"`
 		Params         map[string]interface{} `json:"params"`
 		CameraDistance float64                `json:"cameraDistance"`
@@ -77,6 +78,7 @@ func (db *DB) CreateShare(w http.ResponseWriter, r *http.Request) {
 	share := models.Share{
 		Code:           code,
 		ContentHash:    hash,
+		Name:           body.Name,
 		PatternType:    body.PatternType,
 		Params:         body.Params,
 		CameraDistance: body.CameraDistance,

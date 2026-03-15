@@ -4,6 +4,7 @@ import useStore from '../store/useStore'
 import type { ParameterSchema } from '../types/genome'
 import { buildShareUrl } from '../utils/shareLink'
 import * as api from '../api/client'
+import { getDefaultCameraDistance, getPatternLabel } from '../patterns/PatternRegistry'
 
 function randomHexColor(): string {
   return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')
@@ -33,7 +34,9 @@ export default function ParameterPanel() {
     null,
   )
   const [lockedParams, setLockedParams] = useState<Record<string, boolean>>({})
-  const [shareTooltip, setShareTooltip] = useState<string | null>(null)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareStatus, setShareStatus] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const toggleSection = useCallback(
     (key: string) =>
@@ -124,30 +127,43 @@ export default function ParameterPanel() {
     if (currentFavoriteId) {
       removeFavorite(currentFavoriteId)
     } else {
+      const gp = currentScene.genome.globalParams
       addFavorite({
         patternType: layer.patternType,
         params: { ...layer.params },
-        cameraDistance: currentScene.genome.globalParams.cameraDistance,
+        cameraDistance: gp.cameraDistance,
+        cameraAzimuth: gp.cameraAzimuth ?? 0,
+        cameraPolar: gp.cameraPolar ?? 90,
+        cameraTargetX: gp.cameraTargetX ?? 0,
+        cameraTargetY: gp.cameraTargetY ?? 0,
+        cameraTargetZ: gp.cameraTargetZ ?? 0,
       })
     }
   }
 
   const handleShare = async () => {
     if (!layer || !currentScene) return
-    setShareTooltip('Creating...')
+    setShareStatus('Creating...')
+    setShareUrl(null)
     try {
       const share = await api.createShare({
+        name: currentScene.name || undefined,
         patternType: layer.patternType,
         params: { ...layer.params },
         cameraDistance: currentScene.genome.globalParams.cameraDistance,
       })
       const url = buildShareUrl(share.code)
-      await navigator.clipboard.writeText(url)
-      setShareTooltip('Copied!')
-      setTimeout(() => setShareTooltip(null), 2000)
+      setShareUrl(url)
+      setShareStatus(null)
+      setCopied(false)
+      try {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch { /* clipboard may be blocked */ }
     } catch {
-      setShareTooltip('Share failed')
-      setTimeout(() => setShareTooltip(null), 3000)
+      setShareStatus('Share failed')
+      setTimeout(() => { setShareStatus(null) }, 3000)
     }
   }
 
@@ -409,7 +425,7 @@ export default function ParameterPanel() {
               className="flex-1 px-3 py-2 flex items-center justify-between hover:bg-white/5 transition-colors"
             >
               <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
-                {schema.label || layer.patternType}
+                {schema.label || getPatternLabel(layer.patternType)}
               </span>
               <span className="text-[10px] text-gray-600">
                 {expandedSections.pattern ? '\u25BC' : '\u25B6'}
@@ -426,20 +442,13 @@ export default function ParameterPanel() {
             >
               {currentFavoriteId ? '\u2605' : '\u2606'}
             </button>
-            <div className="relative">
-              <button
-                onClick={handleShare}
-                className="px-1.5 py-1 text-[10px] font-medium text-fuchsia-400 bg-fuchsia-400/10 rounded hover:bg-fuchsia-400/20 transition-colors"
-                title="Copy share link"
-              >
-                Share
-              </button>
-              {shareTooltip && (
-                <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-black/90 border border-white/10 rounded text-[10px] text-green-400 whitespace-nowrap z-50">
-                  {shareTooltip}
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handleShare}
+              className="px-1.5 py-1 text-[10px] font-medium text-fuchsia-400 bg-fuchsia-400/10 rounded hover:bg-fuchsia-400/20 transition-colors"
+              title="Copy share link"
+            >
+              {shareStatus || 'Share'}
+            </button>
             <button
               onClick={randomizeParams}
               className="px-2 py-1 mr-2 text-[10px] font-medium text-cyan-400 bg-cyan-400/10 rounded hover:bg-cyan-400/20 transition-colors"
@@ -546,8 +555,8 @@ export default function ParameterPanel() {
         )}
       </div>
 
-      {/* Camera */}
-      <div>
+      {/* Camera — hidden for shader patterns where camera has no effect */}
+      {layer && getDefaultCameraDistance(layer.patternType) !== 0 && <div>
         <button
           onClick={() => toggleSection('camera')}
           className="w-full px-3 py-2 flex items-center justify-between border-b border-white/5 hover:bg-white/5 transition-colors"
@@ -582,9 +591,128 @@ export default function ParameterPanel() {
                 className="w-full"
               />
             </div>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-gray-400">Azimuth (horizontal)</label>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {(globalParams.cameraAzimuth ?? 0).toFixed(1)}&deg;
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={0.5}
+                value={globalParams.cameraAzimuth ?? 0}
+                onChange={(e) =>
+                  updateGlobalParams({
+                    cameraAzimuth: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-gray-400">Elevation (vertical)</label>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {(globalParams.cameraPolar ?? 90).toFixed(1)}&deg;
+                </span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={179}
+                step={0.5}
+                value={globalParams.cameraPolar ?? 90}
+                onChange={(e) =>
+                  updateGlobalParams({
+                    cameraPolar: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-gray-400">Target X</label>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {(globalParams.cameraTargetX ?? 0).toFixed(1)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-100}
+                max={100}
+                step={0.5}
+                value={globalParams.cameraTargetX ?? 0}
+                onChange={(e) =>
+                  updateGlobalParams({
+                    cameraTargetX: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-gray-400">Target Y</label>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {(globalParams.cameraTargetY ?? 0).toFixed(1)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-100}
+                max={100}
+                step={0.5}
+                value={globalParams.cameraTargetY ?? 0}
+                onChange={(e) =>
+                  updateGlobalParams({
+                    cameraTargetY: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-gray-400">Target Z</label>
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {(globalParams.cameraTargetZ ?? 0).toFixed(1)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={-100}
+                max={100}
+                step={0.5}
+                value={globalParams.cameraTargetZ ?? 0}
+                onChange={(e) =>
+                  updateGlobalParams({
+                    cameraTargetZ: parseFloat(e.target.value),
+                  })
+                }
+                className="w-full"
+              />
+            </div>
+            <button
+              onClick={() =>
+                updateGlobalParams({
+                  cameraAzimuth: 0,
+                  cameraPolar: 90,
+                  cameraTargetX: 0,
+                  cameraTargetY: 0,
+                  cameraTargetZ: 0,
+                })
+              }
+              className="w-full py-1 text-[10px] text-gray-500 hover:text-cyan-400 bg-white/5 hover:bg-white/10 rounded transition-colors"
+            >
+              Reset Camera Angle
+            </button>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Background color */}
       <div>
@@ -701,6 +829,49 @@ export default function ParameterPanel() {
           </div>
         )}
       </div>
+
+      {/* Share URL dialog */}
+      {shareUrl && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setShareUrl(null)}>
+          <div className="bg-gray-900 border border-white/10 rounded-lg p-4 w-96 max-w-[90vw] shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-white">Share Link</h3>
+              <button onClick={() => setShareUrl(null)} className="text-gray-500 hover:text-white text-lg leading-none">&times;</button>
+            </div>
+            <input
+              type="text"
+              readOnly
+              value={shareUrl}
+              className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-xs text-cyan-400 font-mono select-all focus:outline-none focus:border-cyan-400/50"
+              onFocus={(e) => e.target.select()}
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(shareUrl)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  } catch { /* clipboard blocked */ }
+                }}
+                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  copied
+                    ? 'text-green-400 bg-green-500/20 border border-green-400/30'
+                    : 'text-white bg-fuchsia-500/20 border border-fuchsia-400/30 hover:bg-fuchsia-500/30'
+                }`}
+              >
+                {copied ? 'Copied!' : 'Copy to Clipboard'}
+              </button>
+              <button
+                onClick={() => setShareUrl(null)}
+                className="px-3 py-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -76,3 +76,13 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   box-shadow: 0 0 6px rgba(34, 211, 238, 0.4);
 }
+
+@keyframes fade-out {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.animate-fade-out {
+  animation: fade-out 5s ease-out forwards;
+}

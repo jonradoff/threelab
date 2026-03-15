@@ -36,6 +36,11 @@ export interface GlobalParams {
   bloomRadius: number
   bloomThreshold: number
   cameraDistance: number
+  cameraAzimuth: number    // horizontal orbit angle in degrees (0 = front)
+  cameraPolar: number      // vertical orbit angle in degrees (90 = equator, 0 = top)
+  cameraTargetX: number    // look-at target X
+  cameraTargetY: number    // look-at target Y
+  cameraTargetZ: number    // look-at target Z
   mouseInteraction: MouseInteraction
   parallax: Parallax
   colorPalette: ColorPalette

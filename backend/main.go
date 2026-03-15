@@ -21,6 +21,7 @@ import (
 	"threelab/handlers"
 	mcppkg "threelab/mcp"
 	"threelab/middleware"
+	"threelab/pkg/healthz"
 	"threelab/services"
 )
 
@@ -49,23 +50,30 @@ func main() {
 	presetsCol := db.Collection("presets")
 	evolutionCol := db.Collection("evolution_sessions")
 	sharesCol := db.Collection("shares")
+	anonUsersCol := db.Collection("anonymous_users")
+	favoritesCol := db.Collection("favorites")
+	favoritesSharesCol := db.Collection("favorites_shares")
 
 	// Create indexes
 	createIndexes(ctx, scenesCol, usersCol, sharesCol)
+	createAnonIndexes(ctx, anonUsersCol, favoritesCol, favoritesSharesCol)
 
 	// Handler dependencies
 	h := &handlers.DB{
-		Scenes:    scenesCol,
-		Users:     usersCol,
-		Presets:   presetsCol,
-		Evolution: evolutionCol,
-		Shares:    sharesCol,
-		JWTSecret: cfg.JWTSecret,
+		Scenes:          scenesCol,
+		Users:           usersCol,
+		Presets:         presetsCol,
+		Evolution:       evolutionCol,
+		Shares:          sharesCol,
+		Favorites:       favoritesCol,
+		FavoritesShares: favoritesSharesCol,
+		JWTSecret:       cfg.JWTSecret,
 	}
 
 	// Auth middleware
 	authRequired := middleware.AuthMiddleware(cfg.JWTSecret, usersCol)
 	optionalAuth := middleware.OptionalAuthMiddleware(cfg.JWTSecret, usersCol)
+	anonAuth := middleware.AnonymousAuthMiddleware(anonUsersCol)
 
 	// CORS
 	corsHandler := middleware.NewCORS(cfg.FrontendURL)
@@ -128,6 +136,17 @@ func main() {
 	r.HandleFunc("/api/shares", h.CreateShare).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/shares/{code}", h.GetShare).Methods("GET", "OPTIONS")
 
+	// Favorites routes (anonymous auth)
+	favRouter := r.PathPrefix("/api/favorites").Subrouter()
+	favRouter.Use(anonAuth)
+	favRouter.HandleFunc("", h.ListFavorites).Methods("GET")
+	favRouter.HandleFunc("", h.AddFavorite).Methods("POST")
+	favRouter.HandleFunc("/{id}", h.DeleteFavorite).Methods("DELETE")
+
+	// Favorites share routes (public)
+	r.HandleFunc("/api/favorites-shares", h.CreateFavoritesShare).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/favorites-shares/{code}", h.GetFavoritesShare).Methods("GET", "OPTIONS")
+
 	// Pattern schemas (public)
 	r.HandleFunc("/api/schemas", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -139,11 +158,43 @@ func main() {
 	streamableHandler := mcpserver.NewStreamableHTTPServer(mcpSrv.MCPServer())
 	r.PathPrefix("/mcp").Handler(http.StripPrefix("/mcp", streamableHandler))
 
-	// Health check
-	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
-	}).Methods("GET")
+	// Render tracker (24h rolling window)
+	renderTracker := healthz.NewRenderTracker()
+
+	// POST /api/renders — frontend reports pattern renders
+	r.HandleFunc("/api/renders", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Pattern string `json:"pattern"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Pattern == "" {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		renderTracker.Record(body.Pattern)
+		w.WriteHeader(http.StatusNoContent)
+	}).Methods("POST")
+
+	// Health check — VibeCtl Health Check Protocol
+	checks := map[string]healthz.CheckFunc{
+		"mongodb": func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			return client.Ping(ctx, nil)
+		},
+	}
+	kpis := func() []healthz.KPI {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		sceneCount, _ := scenesCol.CountDocuments(ctx, bson.M{})
+		return []healthz.KPI{
+			{Name: "scenes", Value: float64(sceneCount), Unit: "count"},
+			{Name: "distinct_renders_24h", Value: float64(renderTracker.Count()), Unit: "count"},
+			{Name: "total_renders_24h", Value: float64(renderTracker.TotalRenders()), Unit: "count"},
+		}
+	}
+	r.HandleFunc("/healthz", healthz.Handler("1.0.0", checks, kpis)).Methods("GET")
+	// Keep /api/health for backward compatibility
+	r.HandleFunc("/api/health", healthz.Handler("1.0.0", checks, kpis)).Methods("GET")
 
 	handler := corsHandler.Handler(r)
 
@@ -215,4 +266,22 @@ func createIndexes(ctx context.Context, scenesCol, usersCol, sharesCol *mongo.Co
 	})
 
 	fmt.Println("Database indexes created")
+}
+
+func createAnonIndexes(ctx context.Context, anonCol, favCol, favSharesCol *mongo.Collection) {
+	anonCol.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "uid", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	})
+
+	favCol.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{{Key: "uid", Value: 1}},
+	})
+
+	favSharesCol.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "code", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	})
+
+	fmt.Println("Anonymous indexes created")
 }

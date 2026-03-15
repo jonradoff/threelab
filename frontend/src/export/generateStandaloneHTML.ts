@@ -1,0 +1,442 @@
+import type { Scene } from '../types/genome'
+import { loadUserPatterns } from '../nodes/storage'
+import { topologicalSort, executeGraph } from '../nodes/executor'
+import type { GraphOutputData } from '../nodes/executor'
+
+/**
+ * Extract the shader configuration from the current scene by running the node graph once.
+ * Returns the GraphOutputData which contains fragmentShader, uniforms, passes, etc.
+ */
+export function extractShaderConfig(scene: Scene): GraphOutputData | null {
+  const layer = scene.genome.layers[0]
+  if (!layer) return null
+
+  // Find the graph for this pattern
+  const allPatterns = loadUserPatterns()
+  const patternType = layer.patternType
+
+  // Patterns use user_<graphId> as the type key
+  let graphId = patternType.startsWith('user_') ? patternType.slice(5) : patternType
+  // Also check __graphId in params
+  const paramGraphId = layer.params.__graphId as string | undefined
+  if (paramGraphId) graphId = paramGraphId
+
+  const graph = allPatterns.find((p) => p.id === graphId)
+  if (!graph) return null
+
+  // Execute the graph once to get the output
+  const ctx = {
+    elapsed: 0,
+    delta: 0.016,
+    params: layer.params,
+    frameState: new Map(),
+    resolution: [800, 600] as [number, number],
+    mouse: { x: 0, y: 0 },
+    mouseVelocity: { x: 0, y: 0 },
+  }
+
+  try {
+    const sortedIds = topologicalSort(graph.nodes, graph.edges)
+    const results = executeGraph(graph.nodes, graph.edges, sortedIds, ctx)
+    // Find the first shader output
+    for (const result of results) {
+      if (result.__mode === 'shader') {
+        return result
+      }
+    }
+  } catch (e) {
+    console.error('Failed to execute graph for export:', e)
+  }
+
+  return null
+}
+
+/**
+ * Generate a complete standalone HTML file that renders the current scene's shader.
+ */
+export function generateStandaloneHTML(scene: Scene): string | null {
+  const config = extractShaderConfig(scene)
+  if (!config) return null
+
+  const title = scene.name || 'Threelab Export'
+  const isMultiPass = config.passes && config.passes.length > 0
+
+  if (isMultiPass) {
+    return generateMultiPassHTML(config, title)
+  } else {
+    return generateSinglePassHTML(config, title)
+  }
+}
+
+function generateSinglePassHTML(config: GraphOutputData, title: string): string {
+  const frag = config.fragmentShader ?? ''
+  const uniforms = config.uniforms ?? {}
+
+  // Build uniform declarations for the animation loop
+  const uniformEntries = Object.entries(uniforms)
+    .filter(([k]) => k !== 'uTime' && k !== 'uAspect')
+    .map(([k, v]) => {
+      if (Array.isArray(v)) {
+        if (v.length === 2) return `    ${k}: { value: new THREE.Vector2(${v[0]}, ${v[1]}) }`
+        if (v.length === 3) return `    ${k}: { value: new THREE.Vector3(${v[0]}, ${v[1]}, ${v[2]}) }`
+        if (v.length === 4) return `    ${k}: { value: new THREE.Vector4(${v[0]}, ${v[1]}, ${v[2]}, ${v[3]}) }`
+      }
+      return `    ${k}: { value: ${JSON.stringify(v)} }`
+    })
+
+  // Always include uTime and uAspect
+  uniformEntries.unshift('    uTime: { value: 0.0 }')
+  uniformEntries.unshift('    uAspect: { value: 1.0 }')
+
+  const uniformsStr = uniformEntries.join(',\n')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { overflow: hidden; background: #000; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<script id="vertShader" type="x-shader/x-vertex">
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}
+<\/script>
+<script id="fragShader" type="x-shader/x-fragment">
+${frag}
+<\/script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"><\/script>
+<script>
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+const uniforms = {
+${uniformsStr}
+};
+
+const material = new THREE.ShaderMaterial({
+  vertexShader: document.getElementById('vertShader').textContent,
+  fragmentShader: document.getElementById('fragShader').textContent,
+  uniforms,
+  depthWrite: false,
+  depthTest: false,
+  transparent: true,
+});
+
+const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+scene.add(quad);
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  uniforms.uTime.value = clock.getElapsedTime();
+  uniforms.uAspect.value = window.innerWidth / window.innerHeight;
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+<\/script>
+</body>
+</html>`
+}
+
+function generateMultiPassHTML(config: GraphOutputData, title: string): string {
+  const passes = config.passes!
+  const rtDefs = config.renderTargetDefs ?? {}
+  const stepsPerFrame = config.stepsPerFrame ?? 1
+
+  // Serialize render target definitions
+  const rtDefsJson = JSON.stringify(rtDefs, null, 2)
+
+  // Serialize passes (with shader code inline)
+  const passesJson = JSON.stringify(passes.map((p) => ({
+    name: p.name,
+    fragmentShader: p.fragmentShader,
+    vertexShader: p.vertexShader,
+    uniforms: serializeUniforms(p.uniforms),
+    target: p.target,
+    readFrom: p.readFrom,
+    mode: p.mode,
+    agentTarget: p.agentTarget,
+    agentRes: p.agentRes,
+    noClear: p.noClear,
+  })), null, 2)
+
+  // Serialize init data (Float32Arrays → regular arrays)
+  let initDataStr = 'null'
+  if (config.initData) {
+    const serialized: Record<string, number[]> = {}
+    for (const [k, v] of Object.entries(config.initData)) {
+      serialized[k] = Array.from(v)
+    }
+    initDataStr = JSON.stringify(serialized)
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { overflow: hidden; background: #000; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"><\/script>
+<script>
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+const displayScene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const displayQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial());
+displayScene.add(displayQuad);
+
+const simScene = new THREE.Scene();
+const simQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial());
+simScene.add(simQuad);
+
+const SIM_VERT = \`varying vec2 vUv;
+void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }\`;
+
+const DISPLAY_VERT = \`varying vec2 vUv;
+void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }\`;
+
+// ─── Render targets ───
+const rtDefs = ${rtDefsJson};
+const rtMap = {};
+const rtFrame = {};
+
+function getFilter(f) { return f === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter; }
+function getType(t) { return t === 'float' ? THREE.FloatType : t === 'half' ? THREE.HalfFloatType : THREE.UnsignedByteType; }
+function getWrap(w) { return w === 'repeat' ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping; }
+
+for (const [name, def] of Object.entries(rtDefs)) {
+  const count = def.pingPong ? 2 : 1;
+  const targets = [];
+  for (let i = 0; i < count; i++) {
+    targets.push(new THREE.WebGLRenderTarget(def.width, def.height, {
+      minFilter: getFilter(def.filter), magFilter: getFilter(def.filter),
+      format: THREE.RGBAFormat, type: getType(def.type),
+      wrapS: getWrap(def.wrap), wrapT: getWrap(def.wrap),
+    }));
+  }
+  rtMap[name] = targets;
+  rtFrame[name] = 0;
+}
+
+// ─── Init data ───
+const initDataRaw = ${initDataStr};
+if (initDataRaw) {
+  const initScene = new THREE.Scene();
+  for (const [name, arr] of Object.entries(initDataRaw)) {
+    const targets = rtMap[name];
+    const def = rtDefs[name];
+    if (!targets || !def) continue;
+    const tex = new THREE.DataTexture(new Float32Array(arr), def.width, def.height, THREE.RGBAFormat, THREE.FloatType);
+    tex.needsUpdate = true;
+    const mat = new THREE.MeshBasicMaterial({ map: tex });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+    initScene.add(mesh);
+    renderer.setRenderTarget(targets[0]);
+    renderer.render(initScene, camera);
+    renderer.setRenderTarget(null);
+    initScene.remove(mesh);
+    mat.dispose();
+    tex.dispose();
+    mesh.geometry.dispose();
+  }
+}
+
+// ─── Deposit infrastructure ───
+const depositScene = new THREE.Scene();
+const depositGeoCache = {};
+
+function getDepositGeo(agentRes) {
+  if (depositGeoCache[agentRes]) return depositGeoCache[agentRes];
+  const count = agentRes * agentRes;
+  const uvs = new Float32Array(count * 2);
+  for (let y = 0; y < agentRes; y++) {
+    for (let x = 0; x < agentRes; x++) {
+      const i = y * agentRes + x;
+      uvs[i * 2] = (x + 0.5) / agentRes;
+      uvs[i * 2 + 1] = (y + 0.5) / agentRes;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+  geo.setAttribute('agentUV', new THREE.BufferAttribute(uvs, 2));
+  depositGeoCache[agentRes] = geo;
+  return geo;
+}
+
+// ─── Passes ───
+const passConfigs = ${passesJson};
+const stepsPerFrame = ${stepsPerFrame};
+
+function toUniformValue(val) {
+  if (Array.isArray(val)) {
+    if (val.length === 2) return new THREE.Vector2(val[0], val[1]);
+    if (val.length === 3) return new THREE.Vector3(val[0], val[1], val[2]);
+    if (val.length === 4) return new THREE.Vector4(val[0], val[1], val[2], val[3]);
+  }
+  return val;
+}
+
+function buildUniforms(u) {
+  const result = {};
+  for (const [k, v] of Object.entries(u)) result[k] = { value: toUniformValue(v) };
+  return result;
+}
+
+function applyUniforms(mat, u) {
+  for (const [k, v] of Object.entries(u)) {
+    const cv = toUniformValue(v);
+    if (!mat.uniforms[k]) mat.uniforms[k] = { value: cv };
+    else mat.uniforms[k].value = cv;
+  }
+}
+
+const passMats = {};
+for (const pass of passConfigs) {
+  const isDisplay = !pass.target;
+  const vert = pass.vertexShader || (isDisplay ? DISPLAY_VERT : SIM_VERT);
+  const u = buildUniforms(pass.uniforms || {});
+  passMats[pass.name] = new THREE.ShaderMaterial({
+    vertexShader: vert,
+    fragmentShader: pass.fragmentShader,
+    uniforms: u,
+    depthWrite: false,
+    depthTest: false,
+  });
+}
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const elapsed = clock.getElapsedTime();
+
+  for (let step = 0; step < stepsPerFrame; step++) {
+    for (const pass of passConfigs) {
+      if (step < stepsPerFrame - 1 && !pass.target) continue;
+
+      const mat = passMats[pass.name];
+
+      // Update time uniforms
+      if (mat.uniforms.time) mat.uniforms.time.value = elapsed;
+      if (mat.uniforms.uTime) mat.uniforms.uTime.value = elapsed;
+
+      // Bind read-from textures
+      if (pass.readFrom) {
+        for (const [uName, tName] of Object.entries(pass.readFrom)) {
+          const targets = rtMap[tName];
+          const frame = rtFrame[tName] || 0;
+          const def = rtDefs[tName];
+          const srcIdx = def && def.pingPong ? (frame % 2) : 0;
+          if (targets) {
+            if (!mat.uniforms[uName]) mat.uniforms[uName] = { value: targets[srcIdx].texture };
+            else mat.uniforms[uName].value = targets[srcIdx].texture;
+          }
+        }
+      }
+
+      if (pass.target) {
+        const targets = rtMap[pass.target];
+        if (!targets) continue;
+        const def = rtDefs[pass.target];
+        const frame = rtFrame[pass.target] || 0;
+        const dstIdx = def && def.pingPong
+          ? (pass.noClear ? (frame % 2) : ((frame + 1) % 2))
+          : 0;
+
+        if (pass.mode === 'deposit') {
+          const agentRes = pass.agentRes || 32;
+          const geo = getDepositGeo(agentRes);
+          if (pass.agentTarget) {
+            const aTargets = rtMap[pass.agentTarget];
+            const aFrame = rtFrame[pass.agentTarget] || 0;
+            const aDef = rtDefs[pass.agentTarget];
+            const aSrcIdx = aDef && aDef.pingPong ? (aFrame % 2) : 0;
+            if (aTargets) {
+              if (!mat.uniforms.agentTex) mat.uniforms.agentTex = { value: aTargets[aSrcIdx].texture };
+              else mat.uniforms.agentTex.value = aTargets[aSrcIdx].texture;
+            }
+          }
+          mat.blending = THREE.AdditiveBlending;
+          const pts = new THREE.Points(geo, mat);
+          depositScene.add(pts);
+          renderer.setRenderTarget(targets[dstIdx]);
+          renderer.autoClear = false;
+          renderer.render(depositScene, camera);
+          renderer.autoClear = true;
+          renderer.setRenderTarget(null);
+          depositScene.remove(pts);
+        } else {
+          simQuad.material = mat;
+          renderer.setRenderTarget(targets[dstIdx]);
+          if (pass.noClear) renderer.autoClear = false;
+          renderer.render(simScene, camera);
+          if (pass.noClear) renderer.autoClear = true;
+          renderer.setRenderTarget(null);
+        }
+
+        if (def && def.pingPong && !pass.noClear) {
+          rtFrame[pass.target] = frame + 1;
+        }
+      } else {
+        displayQuad.material = mat;
+        renderer.render(displayScene, camera);
+      }
+    }
+  }
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+<\/script>
+</body>
+</html>`
+}
+
+function serializeUniforms(uniforms: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(uniforms)) {
+    if (v instanceof Float32Array || ArrayBuffer.isView(v)) {
+      result[k] = Array.from(v as Float32Array)
+    } else {
+      result[k] = v
+    }
+  }
+  return result
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}

@@ -1,19 +1,14 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
-import { getDefaultCameraDistance } from '../patterns/PatternRegistry'
+import { getDefaultCameraDistance, getDefaultParams, getPatternLabel } from '../patterns/PatternRegistry'
 import * as api from '../api/client'
 import ExportModal from './ExportModal'
+import PatternManager from './PatternManager'
 
 export default function TopBar() {
   const currentScene = useStore((s) => s.currentScene)
-  const isModified = useStore((s) => s.isModified)
-  const user = useStore((s) => s.user)
-  const authToken = useStore((s) => s.authToken)
   const setScene = useStore((s) => s.setScene)
-  const setAuth = useStore((s) => s.setAuth)
-  const logout = useStore((s) => s.logout)
-  const markSaved = useStore((s) => s.markSaved)
   const favorites = useStore((s) => s.favorites)
   const favoritesViewIndex = useStore((s) => s.favoritesViewIndex)
   const setFavoritesViewIndex = useStore((s) => s.setFavoritesViewIndex)
@@ -25,64 +20,23 @@ export default function TopBar() {
   const [editingName, setEditingName] = useState(false)
   const [nameValue, setNameValue] = useState('')
   const [showExport, setShowExport] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
-  const [authEmail, setAuthEmail] = useState('')
-  const [authPassword, setAuthPassword] = useState('')
-  const [authUsername, setAuthUsername] = useState('')
-  const [authError, setAuthError] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [showPatterns, setShowPatterns] = useState(false)
+  const [slideshowActive, setSlideshowActive] = useState(false)
+  const [slideshowInterval, setSlideshowInterval] = useState(8)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+  const slideshowTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
-
-  const handleSave = async () => {
-    if (!currentScene) return
-    setSaving(true)
-    try {
-      if (currentScene.id) {
-        const updated = await api.updateScene(currentScene.id, {
-          name: currentScene.name,
-          genome: currentScene.genome,
-          tags: currentScene.tags,
-          visibility: currentScene.visibility,
-        })
-        setScene(updated)
-      } else {
-        const created = await api.createScene({
-          name: currentScene.name || 'Untitled',
-          genome: currentScene.genome,
-          tags: currentScene.tags || [],
-          visibility: 'private',
-        })
-        setScene(created)
-      }
-      markSaved()
-    } catch (err) {
-      console.error('Save failed:', err)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleAuth = async () => {
-    setAuthError('')
-    try {
-      if (authMode === 'register') {
-        const resp = await api.register(authUsername, authEmail, authPassword)
-        setAuth(resp.token, resp.user)
-      } else {
-        const resp = await api.login(authEmail, authPassword)
-        setAuth(resp.token, resp.user)
-      }
-      setShowAuth(false)
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Auth failed')
-    }
-  }
 
   const loadFavorite = useCallback(
     (index: number) => {
       if (!currentScene || index < 0 || index >= favorites.length) return
       const fav = favorites[index]
+      // Merge registry defaults (includes __graphId for migrated patterns)
+      // so old favorites created before node-graph migration still work
+      const registryDefaults = getDefaultParams(fav.patternType)
+      const mergedParams = { ...registryDefaults, ...fav.params }
       setScene({
         ...currentScene,
         genome: {
@@ -93,12 +47,17 @@ export default function TopBar() {
               enabled: true,
               blendMode: 'normal',
               opacity: 1,
-              params: { ...fav.params },
+              params: mergedParams,
             },
           ],
           globalParams: {
             ...currentScene.genome.globalParams,
             cameraDistance: fav.cameraDistance,
+            cameraAzimuth: fav.cameraAzimuth ?? 0,
+            cameraPolar: fav.cameraPolar ?? 90,
+            cameraTargetX: fav.cameraTargetX ?? 0,
+            cameraTargetY: fav.cameraTargetY ?? 0,
+            cameraTargetZ: fav.cameraTargetZ ?? 0,
           },
         },
       })
@@ -117,6 +76,30 @@ export default function TopBar() {
     loadFavorite(idx)
   }, [favoritesViewIndex, favorites.length, loadFavorite])
 
+  // Slideshow auto-advance
+  useEffect(() => {
+    if (slideshowTimerRef.current) {
+      clearInterval(slideshowTimerRef.current)
+      slideshowTimerRef.current = null
+    }
+    if (slideshowActive && browseFavorites && favorites.length > 1) {
+      slideshowTimerRef.current = setInterval(() => {
+        favNext()
+      }, slideshowInterval * 1000)
+    }
+    return () => {
+      if (slideshowTimerRef.current) {
+        clearInterval(slideshowTimerRef.current)
+        slideshowTimerRef.current = null
+      }
+    }
+  }, [slideshowActive, browseFavorites, favorites.length, slideshowInterval, favNext])
+
+  // Stop slideshow when exiting browse mode
+  useEffect(() => {
+    if (!browseFavorites) setSlideshowActive(false)
+  }, [browseFavorites])
+
   const startNameEdit = () => {
     setNameValue(currentScene?.name || '')
     setEditingName(true)
@@ -127,6 +110,40 @@ export default function TopBar() {
     setEditingName(false)
     if (currentScene && nameValue.trim()) {
       setScene({ ...currentScene, name: nameValue.trim() })
+    }
+  }
+
+  const handleShareFavorites = async () => {
+    if (favorites.length === 0) return
+    setShareLoading(true)
+    setShareCopied(false)
+    try {
+      const resp = await api.createFavoritesShare(favorites)
+      const url = `${window.location.origin}/favorites/${resp.code}`
+      setShareUrl(url)
+    } catch (err) {
+      console.error('Failed to share favorites:', err)
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
+  const handleCopyShareUrl = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch {
+      // fallback
+      const ta = document.createElement('textarea')
+      ta.value = shareUrl
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
     }
   }
 
@@ -161,9 +178,6 @@ export default function TopBar() {
                 {currentScene.name || 'Untitled'}
               </span>
             )}
-            {isModified && (
-              <span className="text-[10px] text-amber-400">unsaved</span>
-            )}
           </div>
         )}
 
@@ -172,21 +186,12 @@ export default function TopBar() {
         {/* Actions */}
         <div className="flex items-center gap-3">
           {currentScene && (
-            <>
-              <button
-                onClick={handleSave}
-                disabled={saving || !authToken}
-                className="text-xs px-3 py-1.5 rounded bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors disabled:opacity-40"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                onClick={() => setShowExport(true)}
-                className="text-xs px-3 py-1.5 rounded bg-fuchsia-500/20 text-fuchsia-400 hover:bg-fuchsia-500/30 transition-colors"
-              >
-                Export
-              </button>
-            </>
+            <button
+              onClick={() => setShowExport(true)}
+              className="text-xs px-3 py-1.5 rounded bg-fuchsia-500/20 text-fuchsia-400 hover:bg-fuchsia-500/30 transition-colors"
+            >
+              Export
+            </button>
           )}
           <button
             onClick={() => {
@@ -210,31 +215,11 @@ export default function TopBar() {
             {'\u2605'} {favorites.length > 0 ? favorites.length : ''}
           </button>
           <button
-            onClick={() => navigate('/gallery')}
-            className="text-xs px-3 py-1.5 rounded bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200 transition-colors"
+            onClick={() => setShowPatterns(true)}
+            className="text-xs px-3 py-1.5 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 transition-colors"
           >
-            Gallery
+            Patterns
           </button>
-
-          {/* Auth */}
-          {authToken && user ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">{user.username}</span>
-              <button
-                onClick={logout}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAuth(true)}
-              className="text-xs px-3 py-1.5 rounded bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200 transition-colors"
-            >
-              Login
-            </button>
-          )}
         </div>
       </div>
 
@@ -254,7 +239,7 @@ export default function TopBar() {
             {favoritesViewIndex + 1} / {favorites.length}
             {' \u2014 '}
             <span className="text-gray-400">
-              {favorites[favoritesViewIndex]?.patternType}
+              {getPatternLabel(favorites[favoritesViewIndex]?.patternType ?? '')}
             </span>
           </span>
           <button
@@ -283,8 +268,46 @@ export default function TopBar() {
           >
             {'\u2715'}
           </button>
+          <div className="w-px h-5 bg-white/10 mx-1" />
           <button
-            onClick={() => setBrowseFavorites(false)}
+            onClick={() => setSlideshowActive((v) => !v)}
+            className={`text-sm px-1 transition-colors ${
+              slideshowActive
+                ? 'text-amber-400 hover:text-amber-300'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title={slideshowActive ? 'Pause slideshow' : 'Start slideshow'}
+          >
+            {slideshowActive ? '\u23F8' : '\u25B6\uFE0E'}
+          </button>
+          {slideshowActive && (
+            <select
+              value={slideshowInterval}
+              onChange={(e) => setSlideshowInterval(Number(e.target.value))}
+              className="text-[10px] bg-black/40 border border-white/10 rounded px-1 py-0.5 text-gray-400 outline-none"
+              title="Seconds per slide"
+            >
+              <option value={3}>3s</option>
+              <option value={5}>5s</option>
+              <option value={8}>8s</option>
+              <option value={12}>12s</option>
+              <option value={20}>20s</option>
+              <option value={30}>30s</option>
+            </select>
+          )}
+          <button
+            onClick={handleShareFavorites}
+            disabled={shareLoading}
+            className={`text-[10px] transition-colors ${shareLoading ? 'text-gray-600' : 'text-gray-500 hover:text-cyan-400'}`}
+            title="Share slideshow link"
+          >
+            {shareLoading ? 'Sharing...' : 'Share'}
+          </button>
+          <button
+            onClick={() => {
+              setSlideshowActive(false)
+              setBrowseFavorites(false)
+            }}
             className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors ml-1"
             title="Exit favorites"
           >
@@ -293,72 +316,61 @@ export default function TopBar() {
         </div>
       )}
 
-      {/* Auth Modal */}
-      {showAuth && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]"
-          onClick={() => setShowAuth(false)}
-        >
-          <div
-            className="glass-panel-solid rounded-lg p-6 w-80"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-medium text-gray-200 mb-4">
-              {authMode === 'login' ? 'Login' : 'Register'}
-            </h3>
-            {authMode === 'register' && (
-              <input
-                value={authUsername}
-                onChange={(e) => setAuthUsername(e.target.value)}
-                placeholder="Username"
-                className="w-full mb-2 px-3 py-1.5 bg-black/40 border border-white/10 rounded text-sm text-gray-200 outline-none focus:border-cyan-400/50"
-              />
-            )}
-            <input
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-              placeholder="Email"
-              type="email"
-              className="w-full mb-2 px-3 py-1.5 bg-black/40 border border-white/10 rounded text-sm text-gray-200 outline-none focus:border-cyan-400/50"
-            />
-            <input
-              value={authPassword}
-              onChange={(e) => setAuthPassword(e.target.value)}
-              placeholder="Password"
-              type="password"
-              className="w-full mb-3 px-3 py-1.5 bg-black/40 border border-white/10 rounded text-sm text-gray-200 outline-none focus:border-cyan-400/50"
-              onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
-            />
-            {authError && (
-              <p className="text-xs text-red-400 mb-2">{authError}</p>
-            )}
-            <button
-              onClick={handleAuth}
-              className="w-full py-1.5 rounded bg-cyan-500/20 text-cyan-400 text-sm hover:bg-cyan-500/30 transition-colors mb-2"
-            >
-              {authMode === 'login' ? 'Login' : 'Register'}
-            </button>
-            <button
-              onClick={() =>
-                setAuthMode(authMode === 'login' ? 'register' : 'login')
-              }
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {authMode === 'login'
-                ? 'Need an account? Register'
-                : 'Already have an account? Login'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Export Modal */}
       {showExport && currentScene && (
         <ExportModal
-          sceneId={currentScene.id}
           sceneName={currentScene.name}
           onClose={() => setShowExport(false)}
         />
+      )}
+
+      {/* Pattern Manager */}
+      {showPatterns && (
+        <PatternManager onClose={() => setShowPatterns(false)} />
+      )}
+
+      {/* Share Slideshow Modal */}
+      {shareUrl && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]"
+          onClick={() => setShareUrl(null)}
+        >
+          <div
+            className="glass-panel-solid rounded-lg p-6 w-[440px] flex flex-col gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-200">Share Slideshow</h3>
+              <button
+                onClick={() => setShareUrl(null)}
+                className="text-gray-500 hover:text-gray-300"
+              >
+                {'\u2715'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Anyone with this link can view your {favorites.length} favorite{favorites.length === 1 ? '' : 's'} as a slideshow.
+            </p>
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-gray-300 font-mono outline-none select-all"
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                onClick={handleCopyShareUrl}
+                className={`px-4 py-2 rounded text-xs transition-colors ${
+                  shareCopied
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                }`}
+              >
+                {shareCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
