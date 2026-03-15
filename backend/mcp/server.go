@@ -3,7 +3,6 @@ package mcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -318,8 +317,8 @@ func (s *Server) handleMutateScene(ctx context.Context, req mcpgo.CallToolReques
 	mutated := services.MutateGenome(source.Genome, strength)
 	now := time.Now()
 	newScene := models.Scene{
-		Name:        source.Name + " (mutated)",
-		Description: "Mutated from " + source.Name,
+		Name:        source.Name,
+		Description: source.Description,
 		Genome:      mutated,
 		AuthorType:  "agent",
 		AuthorID:    "mcp",
@@ -372,8 +371,8 @@ func (s *Server) handleCrossoverScenes(ctx context.Context, req mcpgo.CallToolRe
 
 	now := time.Now()
 	newScene := models.Scene{
-		Name:        sceneA.Name + " x " + sceneB.Name,
-		Description: "Crossover of " + sceneA.Name + " and " + sceneB.Name,
+		Name:        sceneA.Name,
+		Description: sceneA.Description,
 		Genome:      crossed,
 		AuthorType:  "agent",
 		AuthorID:    "mcp",
@@ -430,8 +429,8 @@ func (s *Server) handleEvolveGeneration(ctx context.Context, req mcpgo.CallToolR
 
 	for _, genome := range candidateGenomes {
 		scene := models.Scene{
-			Name:        source.Name + " gen" + fmt.Sprintf("%d", source.Lineage.Generation+1),
-			Description: "Evolution candidate from " + source.Name,
+			Name:        source.Name,
+			Description: source.Description,
 			Genome:      genome,
 			AuthorType:  "agent",
 			AuthorID:    "mcp",

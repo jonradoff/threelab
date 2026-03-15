@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -189,9 +190,10 @@ func (db *DB) GetFavoritesShare(w http.ResponseWriter, r *http.Request) {
 
 func generateFavCode() string {
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 8)
+	b := make([]byte, 12)
 	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		b[i] = chars[n.Int64()]
 	}
 	return string(b)
 }

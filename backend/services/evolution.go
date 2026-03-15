@@ -29,6 +29,10 @@ func MutateGenome(genome models.Genome, strength float64) models.Genome {
 	for i, layer := range result.Layers {
 		schema := GetPatternSchema(layer.PatternType)
 		if schema == nil {
+			// Fallback: infer schema from actual param values
+			schema = InferSchemaFromParams(layer.Params)
+		}
+		if schema == nil {
 			continue
 		}
 		mutatedParams := make(map[string]interface{})

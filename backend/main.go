@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -73,7 +74,8 @@ func main() {
 	// Auth middleware
 	authRequired := middleware.AuthMiddleware(cfg.JWTSecret, usersCol)
 	optionalAuth := middleware.OptionalAuthMiddleware(cfg.JWTSecret, usersCol)
-	anonAuth := middleware.AnonymousAuthMiddleware(anonUsersCol)
+	secureCookie := strings.HasPrefix(cfg.FrontendURL, "https://")
+	anonAuth := middleware.AnonymousAuthMiddleware(anonUsersCol, secureCookie)
 
 	// CORS
 	corsHandler := middleware.NewCORS(cfg.FrontendURL)
@@ -91,39 +93,33 @@ func main() {
 	authRouter.HandleFunc("/me", h.GetMe).Methods("GET")
 	authRouter.HandleFunc("/api-key", h.GenerateAPIKey).Methods("POST")
 
-	// Scene routes (public / optional auth)
-	publicScenes := r.PathPrefix("/api/scenes").Subrouter()
-	publicScenes.Use(optionalAuth)
-	publicScenes.HandleFunc("", h.ListScenes).Methods("GET")
-	publicScenes.HandleFunc("/{id}", h.GetScene).Methods("GET")
-	publicScenes.HandleFunc("/{id}/export", h.ExportScene).Methods("GET")
+	// Scene routes — single subrouter with optional JWT + anon cookie auth
+	scenesRouter := r.PathPrefix("/api/scenes").Subrouter()
+	scenesRouter.Use(optionalAuth) // extract JWT if present
+	scenesRouter.Use(anonAuth)     // assign anon UID (always)
+	scenesRouter.HandleFunc("", h.ListScenes).Methods("GET")
+	scenesRouter.HandleFunc("/{id}", h.GetScene).Methods("GET")
+	scenesRouter.HandleFunc("/{id}/export", h.ExportScene).Methods("GET")
+	scenesRouter.HandleFunc("", h.CreateScene).Methods("POST")
+	scenesRouter.HandleFunc("/{id}", h.UpdateScene).Methods("PUT")
+	scenesRouter.HandleFunc("/{id}", h.DeleteScene).Methods("DELETE")
+	scenesRouter.HandleFunc("/{id}/rate", h.RateScene).Methods("POST")
+	scenesRouter.HandleFunc("/{id}/thumbnail", h.UpdateThumbnail).Methods("PUT")
 
-	// Scene routes (protected)
-	protectedScenes := r.PathPrefix("/api/scenes").Subrouter()
-	protectedScenes.Use(authRequired)
-	protectedScenes.HandleFunc("", h.CreateScene).Methods("POST")
-	protectedScenes.HandleFunc("/{id}", h.UpdateScene).Methods("PUT")
-	protectedScenes.HandleFunc("/{id}", h.DeleteScene).Methods("DELETE")
-	protectedScenes.HandleFunc("/{id}/rate", h.RateScene).Methods("POST")
-	protectedScenes.HandleFunc("/{id}/thumbnail", h.UpdateThumbnail).Methods("PUT")
-
-	// Evolution routes (protected)
+	// Evolution routes (anonymous auth)
 	evoRouter := r.PathPrefix("/api/evolution").Subrouter()
-	evoRouter.Use(authRequired)
+	evoRouter.Use(anonAuth)
 	evoRouter.HandleFunc("/mutate/{id}", h.MutateScene).Methods("POST")
 	evoRouter.HandleFunc("/crossover", h.CrossoverScenes).Methods("POST")
 	evoRouter.HandleFunc("/candidates/{id}", h.GenerateCandidates).Methods("POST")
 	evoRouter.HandleFunc("/select", h.SelectFavorites).Methods("POST")
 
 	// Preset routes
-	publicPresets := r.PathPrefix("/api/presets").Subrouter()
-	publicPresets.Use(optionalAuth)
-	publicPresets.HandleFunc("", h.ListPresets).Methods("GET")
-	publicPresets.HandleFunc("/{id}", h.GetPreset).Methods("GET")
-
-	protectedPresets := r.PathPrefix("/api/presets").Subrouter()
-	protectedPresets.Use(authRequired)
-	protectedPresets.HandleFunc("", h.CreatePreset).Methods("POST")
+	presetsRouter := r.PathPrefix("/api/presets").Subrouter()
+	presetsRouter.Use(optionalAuth)
+	presetsRouter.HandleFunc("", h.ListPresets).Methods("GET")
+	presetsRouter.HandleFunc("/{id}", h.GetPreset).Methods("GET")
+	presetsRouter.HandleFunc("", h.CreatePreset).Methods("POST")
 
 	// Gallery routes (public)
 	galleryRouter := r.PathPrefix("/api/gallery").Subrouter()

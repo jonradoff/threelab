@@ -21,7 +21,12 @@ const (
 
 // AnonymousAuthMiddleware assigns a UUID cookie to every visitor and stores/updates
 // their record in the anonymous_users collection. The UID is placed in context.
-func AnonymousAuthMiddleware(anonCol *mongo.Collection) func(http.Handler) http.Handler {
+// secureCookie should be true for HTTPS deployments (production), false for HTTP (local dev).
+func AnonymousAuthMiddleware(anonCol *mongo.Collection, secureCookie bool) func(http.Handler) http.Handler {
+	sameSite := http.SameSiteLaxMode
+	if secureCookie {
+		sameSite = http.SameSiteStrictMode
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			uid := ""
@@ -43,7 +48,8 @@ func AnonymousAuthMiddleware(anonCol *mongo.Collection) func(http.Handler) http.
 				Path:     "/",
 				MaxAge:   CookieMaxAge,
 				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
+				Secure:   secureCookie,
+				SameSite: sameSite,
 			})
 
 			// Upsert anonymous user record (fire and forget)

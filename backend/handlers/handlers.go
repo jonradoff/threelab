@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+const maxBodySize = 1 << 20 // 1 MB
 
 // DB holds references to MongoDB collections used by all handlers.
 type DB struct {
@@ -31,5 +34,5 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 
 func decodeJSON(r *http.Request, v interface{}) error {
 	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
+	return json.NewDecoder(io.LimitReader(r.Body, maxBodySize)).Decode(v)
 }

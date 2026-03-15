@@ -1,5 +1,10 @@
 package services
 
+import (
+	"math"
+	"strings"
+)
+
 // ParamSchema describes a single parameter for a pattern type.
 type ParamSchema struct {
 	Name        string   `json:"name"`
@@ -46,13 +51,68 @@ func AllPatternSchemas() []PatternSchema {
 }
 
 // GetPatternSchema returns the schema for a specific pattern type, or nil if not found.
+// Handles the user_builtin_ prefix that the frontend uses for node-graph patterns.
 func GetPatternSchema(patternType string) *PatternSchema {
+	// Strip user_builtin_ prefix to match legacy schema names
+	lookup := patternType
+	if strings.HasPrefix(lookup, "user_builtin_") {
+		lookup = strings.TrimPrefix(lookup, "user_builtin_")
+	} else if strings.HasPrefix(lookup, "user_") {
+		lookup = strings.TrimPrefix(lookup, "user_")
+	}
 	for _, s := range AllPatternSchemas() {
-		if s.PatternType == patternType {
+		if s.PatternType == lookup || s.PatternType == patternType {
 			return &s
 		}
 	}
 	return nil
+}
+
+// InferSchemaFromParams builds a best-effort schema from actual parameter values.
+// Used as fallback when no hand-written schema exists for a pattern type.
+func InferSchemaFromParams(params map[string]interface{}) *PatternSchema {
+	if len(params) == 0 {
+		return nil
+	}
+	schema := &PatternSchema{PatternType: "inferred"}
+	for name, val := range params {
+		if strings.HasPrefix(name, "__") {
+			continue // skip internal fields like __graphId
+		}
+		switch v := val.(type) {
+		case float64:
+			absV := math.Abs(v)
+			minV := 0.0
+			maxV := math.Max(absV*4, 10)
+			if v < 0 {
+				minV = v * 2
+			}
+			if absV <= 1 {
+				maxV = math.Max(absV*5, 1)
+			}
+			schema.Params = append(schema.Params, ParamSchema{
+				Name: name, Type: "float", Min: minV, Max: maxV, Default: v,
+			})
+		case bool:
+			schema.Params = append(schema.Params, ParamSchema{
+				Name: name, Type: "bool", Default: v,
+			})
+		case string:
+			if len(v) == 7 && v[0] == '#' {
+				schema.Params = append(schema.Params, ParamSchema{
+					Name: name, Type: "color", Default: v,
+				})
+			} else {
+				schema.Params = append(schema.Params, ParamSchema{
+					Name: name, Type: "enum", Default: v, EnumValues: []string{v},
+				})
+			}
+		}
+	}
+	if len(schema.Params) == 0 {
+		return nil
+	}
+	return schema
 }
 
 func NetworkGraphSchema() PatternSchema {

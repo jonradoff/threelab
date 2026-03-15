@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"threelab/middleware"
 	"threelab/models"
 	"threelab/services"
 )
@@ -25,7 +24,7 @@ func (db *DB) ListScenes(w http.ResponseWriter, r *http.Request) {
 		filter["visibility"] = vis
 	} else {
 		// Default: show public, or own scenes if authenticated
-		authorID := middleware.GetAuthorID(r)
+		_, authorID := resolveAuthor(r)
 		if authorID != "" {
 			filter["$or"] = bson.A{
 				bson.M{"visibility": "public"},
@@ -92,7 +91,7 @@ func (db *DB) GetScene(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check visibility
-	authorID := middleware.GetAuthorID(r)
+	_, authorID := resolveAuthor(r)
 	if scene.Visibility == "private" && scene.AuthorID != authorID {
 		writeError(w, http.StatusNotFound, "scene not found")
 		return
@@ -102,8 +101,11 @@ func (db *DB) GetScene(w http.ResponseWriter, r *http.Request) {
 }
 
 func (db *DB) CreateScene(w http.ResponseWriter, r *http.Request) {
-	authorType := middleware.GetAuthorType(r)
-	authorID := middleware.GetAuthorID(r)
+	authorType, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
 
 	var scene models.Scene
 	if err := decodeJSON(r, &scene); err != nil {
@@ -153,7 +155,11 @@ func (db *DB) UpdateScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorID := middleware.GetAuthorID(r)
+	_, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
 
 	// Check ownership
 	var existing models.Scene
@@ -167,22 +173,23 @@ func (db *DB) UpdateScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updates map[string]interface{}
-	if err := decodeJSON(r, &updates); err != nil {
+	var raw map[string]interface{}
+	if err := decodeJSON(r, &raw); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	// Remove fields that shouldn't be updated directly
-	delete(updates, "id")
-	delete(updates, "_id")
-	delete(updates, "authorType")
-	delete(updates, "authorId")
-	delete(updates, "createdAt")
-	delete(updates, "ratings")
-	delete(updates, "exportCount")
-
-	updates["updatedAt"] = time.Now()
+	// Allowlist: only permit known safe fields
+	allowedFields := map[string]bool{
+		"name": true, "description": true, "genome": true,
+		"tags": true, "visibility": true, "thumbnail": true,
+	}
+	updates := map[string]interface{}{"updatedAt": time.Now()}
+	for k, v := range raw {
+		if allowedFields[k] {
+			updates[k] = v
+		}
+	}
 
 	_, err = db.Scenes.UpdateOne(r.Context(), bson.M{"_id": oid}, bson.M{"$set": updates})
 	if err != nil {
@@ -204,7 +211,11 @@ func (db *DB) DeleteScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorID := middleware.GetAuthorID(r)
+	_, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
 
 	var existing models.Scene
 	err = db.Scenes.FindOne(r.Context(), bson.M{"_id": oid}).Decode(&existing)
@@ -242,7 +253,7 @@ func (db *DB) RateScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorType := middleware.GetAuthorType(r)
+	authorType, _ := resolveAuthor(r)
 	field := "ratings.human"
 	if authorType == "agent" {
 		field = "ratings.agent"
@@ -316,7 +327,11 @@ func (db *DB) UpdateThumbnail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorID := middleware.GetAuthorID(r)
+	_, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
 
 	var existing models.Scene
 	err = db.Scenes.FindOne(r.Context(), bson.M{"_id": oid}).Decode(&existing)

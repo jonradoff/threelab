@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -21,7 +22,8 @@ const codeLength = 6
 func generateCode() string {
 	b := make([]byte, codeLength)
 	for i := range b {
-		b[i] = codeChars[rand.Intn(len(codeChars))]
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(codeChars))))
+		b[i] = codeChars[n.Int64()]
 	}
 	return string(b)
 }

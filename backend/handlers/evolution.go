@@ -31,6 +31,17 @@ type selectFavoritesRequest struct {
 	SelectedIDs []string `json:"selectedIds"`
 }
 
+// resolveAuthor returns (authorType, authorID) from JWT auth or anonymous cookie.
+func resolveAuthor(r *http.Request) (string, string) {
+	if at := middleware.GetAuthorType(r); at != "" {
+		return at, middleware.GetAuthorID(r)
+	}
+	if uid := middleware.GetAnonUID(r); uid != "" {
+		return "anonymous", uid
+	}
+	return "", ""
+}
+
 func (db *DB) MutateScene(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	oid, err := bson.ObjectIDFromHex(id)
@@ -48,6 +59,12 @@ func (db *DB) MutateScene(w http.ResponseWriter, r *http.Request) {
 		req.Strength = 0.5
 	}
 
+	authorType, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
+
 	var source models.Scene
 	err = db.Scenes.FindOne(r.Context(), bson.M{"_id": oid}).Decode(&source)
 	if err != nil {
@@ -55,14 +72,18 @@ func (db *DB) MutateScene(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ownership check: only allow mutating your own scenes or public/shared ones
+	if source.Visibility == "private" && source.AuthorID != authorID {
+		writeError(w, http.StatusNotFound, "scene not found")
+		return
+	}
+
 	mutated := services.MutateGenome(source.Genome, req.Strength)
-	authorType := middleware.GetAuthorType(r)
-	authorID := middleware.GetAuthorID(r)
 
 	now := time.Now()
 	newScene := models.Scene{
-		Name:        source.Name + " (mutated)",
-		Description: "Mutated from " + source.Name,
+		Name:        source.Name,
+		Description: source.Description,
 		Genome:      mutated,
 		AuthorType:  authorType,
 		AuthorID:    authorID,
@@ -105,6 +126,12 @@ func (db *DB) CrossoverScenes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authorType, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
+
 	var sceneA, sceneB models.Scene
 	if err := db.Scenes.FindOne(r.Context(), bson.M{"_id": oidA}).Decode(&sceneA); err != nil {
 		writeError(w, http.StatusNotFound, "scene A not found")
@@ -115,9 +142,17 @@ func (db *DB) CrossoverScenes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ownership check: only allow crossing your own or public/shared scenes
+	if sceneA.Visibility == "private" && sceneA.AuthorID != authorID {
+		writeError(w, http.StatusNotFound, "scene A not found")
+		return
+	}
+	if sceneB.Visibility == "private" && sceneB.AuthorID != authorID {
+		writeError(w, http.StatusNotFound, "scene B not found")
+		return
+	}
+
 	crossed := services.CrossoverGenomes(sceneA.Genome, sceneB.Genome)
-	authorType := middleware.GetAuthorType(r)
-	authorID := middleware.GetAuthorID(r)
 
 	maxGen := sceneA.Lineage.Generation
 	if sceneB.Lineage.Generation > maxGen {
@@ -126,8 +161,8 @@ func (db *DB) CrossoverScenes(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now()
 	newScene := models.Scene{
-		Name:        sceneA.Name + " x " + sceneB.Name,
-		Description: "Crossover of " + sceneA.Name + " and " + sceneB.Name,
+		Name:        sceneA.Name,
+		Description: sceneA.Description,
 		Genome:      crossed,
 		AuthorType:  authorType,
 		AuthorID:    authorID,
@@ -172,6 +207,12 @@ func (db *DB) GenerateCandidates(w http.ResponseWriter, r *http.Request) {
 		req.Strategy = "mix"
 	}
 
+	authorType, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
+
 	var source models.Scene
 	err = db.Scenes.FindOne(r.Context(), bson.M{"_id": oid}).Decode(&source)
 	if err != nil {
@@ -179,19 +220,23 @@ func (db *DB) GenerateCandidates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ownership check
+	if source.Visibility == "private" && source.AuthorID != authorID {
+		writeError(w, http.StatusNotFound, "scene not found")
+		return
+	}
+
 	candidateGenomes := services.GenerateCandidates(source.Genome, req.Count, req.Strategy)
 
-	authorType := middleware.GetAuthorType(r)
-	authorID := middleware.GetAuthorID(r)
 	now := time.Now()
 
 	var candidateIDs []string
 	var candidateScenes []models.Scene
 
-	for i, genome := range candidateGenomes {
+	for _, genome := range candidateGenomes {
 		scene := models.Scene{
-			Name:        source.Name + " candidate " + bson.NewObjectID().Hex()[:4],
-			Description: "Evolution candidate from " + source.Name,
+			Name:        source.Name,
+			Description: source.Description,
 			Genome:      genome,
 			AuthorType:  authorType,
 			AuthorID:    authorID,
@@ -205,7 +250,6 @@ func (db *DB) GenerateCandidates(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		}
-		_ = i
 
 		result, err := db.Scenes.InsertOne(r.Context(), scene)
 		if err != nil {
@@ -252,10 +296,22 @@ func (db *DB) SelectFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, authorID := resolveAuthor(r)
+	if authorID == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
+
 	var session models.EvolutionSession
 	err = db.Evolution.FindOne(r.Context(), bson.M{"_id": oid}).Decode(&session)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "evolution session not found")
+		return
+	}
+
+	// Ownership check
+	if session.AuthorID != authorID {
+		writeError(w, http.StatusForbidden, "not authorized")
 		return
 	}
 

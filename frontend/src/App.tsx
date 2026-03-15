@@ -160,11 +160,21 @@ function Editor() {
         <EvolutionGrid />
         <button
           onClick={toggleFullscreen}
-          className="absolute z-50 bottom-2 left-2 px-2 py-1 text-[10px] text-gray-400 hover:text-white bg-black/40 border border-white/10 rounded hover:bg-black/60 transition-all"
+          className="absolute z-50 bottom-9 left-2 px-2 py-1 text-[10px] text-gray-400 hover:text-white bg-black/40 border border-white/10 rounded hover:bg-black/60 transition-all"
           title="Full screen (hides UI)"
         >
           Full Screen
         </button>
+        <div className="absolute z-40 bottom-0 left-0 right-0 flex items-center justify-center gap-3 py-1.5 text-[11px] text-gray-600">
+          <span>&copy; 2026{' '}
+            <a href="https://metavert.io" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Metavert LLC</a>
+            {' '}- MIT Licensed Software
+          </span>
+          <span className="text-gray-700">|</span>
+          <a href="https://metavert.io/terms-of-service" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Terms of Service</a>
+          <span className="text-gray-700">|</span>
+          <a href="https://metavert.io/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Privacy</a>
+        </div>
       </div>
       {/* Escape hint — fades out after 5 seconds */}
       {showEscHint && (
