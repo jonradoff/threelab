@@ -4,6 +4,25 @@ A generative art platform for creating, evolving, and sharing interactive 3D vis
 
 Scenes can be exported as standalone HTML files, React components, or raw JSON for embedding in any website.
 
+**Try it free at [threelab.metavert.io](https://threelab.metavert.io)**
+
+## Screenshots
+
+### Pattern Editor
+Inspect and modify any pattern's node graph and GLSL shader code with a live preview.
+
+![Pattern Editor](screenshots/pattern-editor.png)
+
+### Export
+Export scenes as standalone HTML, React components, or JSON — ready to embed anywhere.
+
+![Export Scene](screenshots/export.png)
+
+### Evolution
+Evolve new visuals by mutating and breeding scenes through a genetic algorithm.
+
+![Evolution](screenshots/evolution.png)
+
 ## Features
 
 - **21 built-in patterns** spanning mathematical curves, physics simulations, GPU shaders, and procedural geometry — all available immediately on first load
