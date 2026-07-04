@@ -35,6 +35,11 @@ func AllPatternSchemas() []PatternSchema {
 		FableDreamscapeSchema(),
 		FablePhysarumXLSchema(),
 		FableFireworksSchema(),
+		FableHyperspaceSchema(),
+		FableMirrorworldSchema(),
+		FableCausticsSchema(),
+		FableCajalSchema(),
+		FableCymaticsSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -375,6 +380,142 @@ func FableFireworksSchema() PatternSchema {
 			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
 			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Vignette"},
 			{Name: "mouseLaunch", Type: "bool", Default: true, Description: "Fast mouse moves launch a shell at the cursor"},
+		},
+	}
+}
+
+func FableHyperspaceSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableHyperspace",
+		Description: "Raymarched 3D fractals — infinite Mandelbox temples and kaleidoscopic machine-cathedrals you fly through",
+		Params: []ParamSchema{
+			{Name: "fractalType", Type: "enum", Default: "mandelbox", Description: "Fractal formula", EnumValues: []string{"mandelbox", "kifs", "menger"}},
+			{Name: "iterations", Type: "int", Min: 4, Max: 18, Default: 12, Description: "Fractal detail iterations"},
+			{Name: "scaleParam", Type: "float", Min: -3, Max: 3, Default: -1.8, Description: "Fractal scale (shape driver)"},
+			{Name: "foldParam", Type: "float", Min: 0.4, Max: 2, Default: 1, Description: "Fold amount"},
+			{Name: "minRadius", Type: "float", Min: 0.2, Max: 1, Default: 0.5, Description: "Sphere-fold radius (mandelbox)"},
+			{Name: "morph", Type: "float", Min: 0, Max: 1, Default: 0.2, Description: "Rotation/twist between levels"},
+			{Name: "cameraSpeed", Type: "float", Min: 0, Max: 2.5, Default: 0.7, Description: "Flythrough speed"},
+			{Name: "pathTwist", Type: "float", Min: 0, Max: 2.5, Default: 1, Description: "Camera helix radius"},
+			{Name: "fov", Type: "float", Min: 0.8, Max: 2.5, Default: 1.5, Description: "Field of view"},
+			{Name: "glowStrength", Type: "float", Min: 0, Max: 3, Default: 1, Description: "Fractal haze glow"},
+			{Name: "orbitColor", Type: "float", Min: 0.1, Max: 4, Default: 1, Description: "Orbit-trap color frequency"},
+			{Name: "lightAngle", Type: "float", Min: 0, Max: 360, Default: 40, Description: "Light direction"},
+			{Name: "quality", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Raymarch quality (steps)"},
+			{Name: "palette", Type: "enum", Default: "ultraviolet", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Vignette"},
+		},
+	}
+}
+
+func FableMirrorworldSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableMirrorworld",
+		Description: "Analog video feedback folded through a kaleidoscope — infinite mirrored tunnels of drifting neon light",
+		Params: []ParamSchema{
+			{Name: "segments", Type: "int", Min: 1, Max: 16, Default: 6, Description: "Mirror symmetry segments"},
+			{Name: "kaleidMix", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Kaleidoscope fold amount"},
+			{Name: "zoomRate", Type: "float", Min: 0.9, Max: 1.1, Default: 0.96, Description: "Feedback zoom (<1 tunnels outward)"},
+			{Name: "rotSpeed", Type: "float", Min: -3, Max: 3, Default: 1.3, Description: "Feedback rotation"},
+			{Name: "decay", Type: "float", Min: 0.8, Max: 0.99, Default: 0.94, Description: "Trail persistence"},
+			{Name: "hueDrift", Type: "float", Min: -2, Max: 2, Default: 0.5, Description: "Hue rotation per frame"},
+			{Name: "warp", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Liquid ripple distortion"},
+			{Name: "seedCount", Type: "int", Min: 1, Max: 8, Default: 3, Description: "Light seed orbs"},
+			{Name: "seedSize", Type: "float", Min: 0.008, Max: 0.09, Default: 0.03, Description: "Seed orb size"},
+			{Name: "seedGlow", Type: "float", Min: 0, Max: 3, Default: 1.2, Description: "Seed brightness"},
+			{Name: "seedSpeed", Type: "float", Min: 0, Max: 2, Default: 0.5, Description: "Seed orbit speed"},
+			{Name: "chromatic", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Chromatic aberration"},
+			{Name: "simResolution", Type: "int", Min: 512, Max: 2048, Default: 1024, Description: "Feedback resolution"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Vignette"},
+		},
+	}
+}
+
+func FableCausticsSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableCaustics",
+		Description: "Sunlight refracted through simulated water — dancing caustic webs with prismatic rainbow fringes",
+		Params: []ParamSchema{
+			{Name: "waveSpeed", Type: "float", Min: 0.05, Max: 0.45, Default: 0.3, Description: "Wave propagation speed"},
+			{Name: "damping", Type: "float", Min: 0.97, Max: 0.9995, Default: 0.991, Description: "Ripple persistence"},
+			{Name: "dropRate", Type: "float", Min: 0, Max: 8, Default: 2, Description: "Raindrops per second"},
+			{Name: "dropSize", Type: "float", Min: 0.005, Max: 0.06, Default: 0.018, Description: "Raindrop size"},
+			{Name: "dropStrength", Type: "float", Min: 0, Max: 1.5, Default: 0.35, Description: "Raindrop splash strength"},
+			{Name: "windAmp", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Wind ripple strength"},
+			{Name: "windFreq", Type: "float", Min: 0.2, Max: 3, Default: 1, Description: "Wind ripple frequency"},
+			{Name: "focus", Type: "float", Min: 40, Max: 400, Default: 180, Description: "Lens focus (caustic sharpness)"},
+			{Name: "dispersion", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Prismatic color splitting"},
+			{Name: "sparkle", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Surface glints"},
+			{Name: "stepsPerFrame", Type: "int", Min: 1, Max: 6, Default: 2, Description: "Sim speed (steps/frame at 60fps)"},
+			{Name: "simResolution", Type: "int", Min: 256, Max: 1024, Default: 512, Description: "Simulation resolution"},
+			{Name: "palette", Type: "enum", Default: "abyss", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Vignette"},
+		},
+	}
+}
+
+func FableCajalSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableCajal",
+		Description: "Neurons drawn in ink on aged paper — branching dendrites grow, rest, fade and are redrawn, after Ramón y Cajal",
+		Params: []ParamSchema{
+			{Name: "neurons", Type: "int", Min: 3, Max: 24, Default: 9, Description: "Neurons on the sheet"},
+			{Name: "trunks", Type: "int", Min: 2, Max: 8, Default: 5, Description: "Primary dendrites per neuron"},
+			{Name: "depth", Type: "int", Min: 3, Max: 9, Default: 6, Description: "Branching depth"},
+			{Name: "branchEvery", Type: "float", Min: 0.5, Max: 4, Default: 1.4, Description: "Seconds between branchings"},
+			{Name: "branchAngle", Type: "float", Min: 5, Max: 60, Default: 26, Description: "Fork angle (degrees)"},
+			{Name: "meander", Type: "float", Min: 0, Max: 2, Default: 0.6, Description: "Dendrite wiggle"},
+			{Name: "tipSpeed", Type: "float", Min: 20, Max: 160, Default: 52, Description: "Growth speed"},
+			{Name: "growthSpeed", Type: "float", Min: 0.2, Max: 2, Default: 0.8, Description: "Overall drawing tempo"},
+			{Name: "restHold", Type: "float", Min: 0, Max: 6, Default: 2.5, Description: "Rest before redraw (s)"},
+			{Name: "inkFlow", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Ink flow"},
+			{Name: "fading", Type: "float", Min: 0, Max: 1, Default: 0.15, Description: "Old ink fading rate"},
+			{Name: "bleed", Type: "float", Min: 0, Max: 1, Default: 0.16, Description: "Ink bleed into paper"},
+			{Name: "inkStrength", Type: "float", Min: 0.5, Max: 4, Default: 2, Description: "Ink darkness"},
+			{Name: "simResolution", Type: "int", Min: 512, Max: 2048, Default: 1024, Description: "Canvas resolution"},
+			{Name: "palette", Type: "enum", Default: "ember", Description: "Ink tint palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Ink hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 0.95, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.2, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Vignette"},
+		},
+	}
+}
+
+func FableCymaticsSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableCymatics",
+		Description: "Chladni figures — sand gathering on the nodal lines of a singing plate, sweeping through resonances",
+		Params: []ParamSchema{
+			{Name: "plateShape", Type: "enum", Default: "square", Description: "Plate shape", EnumValues: []string{"square", "round"}},
+			{Name: "baseFreq", Type: "float", Min: 1, Max: 10, Default: 3, Description: "Lowest mode number"},
+			{Name: "freqRange", Type: "float", Min: 2, Max: 14, Default: 8, Description: "Mode number spread"},
+			{Name: "sweepSpeed", Type: "float", Min: 0, Max: 3, Default: 1, Description: "Resonance sweep speed"},
+			{Name: "holdTime", Type: "float", Min: 0.5, Max: 12, Default: 5, Description: "Seconds per figure"},
+			{Name: "lineSharp", Type: "float", Min: 2, Max: 30, Default: 15, Description: "Sand line sharpness"},
+			{Name: "sandGlow", Type: "float", Min: 0.2, Max: 3, Default: 1.3, Description: "Sand brightness"},
+			{Name: "sparkle", Type: "float", Min: 0, Max: 2, Default: 0.7, Description: "Dancing grain speckle"},
+			{Name: "vibrance", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Plate vibration shimmer"},
+			{Name: "palette", Type: "enum", Default: "ember", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.15, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Vignette"},
 		},
 	}
 }

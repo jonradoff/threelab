@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-04 (second drop)
+
+### Added — five more Fable patterns
+- **Fable Hyperspace** — raymarched distance-estimated 3D fractals: Mandelbox, kaleidoscopic IFS (Sierpinski sign-folds), and twisted Menger sponge; orbit-trap palette coloring, proximity glow accumulation, breathing orbit camera.
+- **Fable Mirrorworld** — analog video feedback in a kaleidoscope: ping-pong frame texture folded through N-way mirror symmetry with zoom/rotate resampling, per-frame hue drift, unsharp masking against resample blur, a flower-ring glyph + orbiting seed orbs painting fresh light, prismatic chromatic aberration on display.
+- **Fable Caustics** — a real 2D wave-equation water surface (raindrops + micro-ripple wind chop) rendered as thin-lens caustics: brightness = 1/|det J| of the refraction map from the surface's second derivatives, computed per color channel for prismatic rainbow fringes. Wall-time-normalized sim (same look at 5fps and 60fps); injection constants calibrated numerically against a reference JS simulation.
+- **Fable Cajal** — neurons drawn in ink on aged paper: GPU growth-tip agents follow identical turn sequences from hierarchical branch keys (floor(trait·trunks·2^level)), so hundreds of tips draw one shared trunk that forks into ever-finer dendrites; Beer–Lambert ink absorption on fibered sepia paper; neurons grow, rest, fade, and are redrawn elsewhere.
+- **Fable Cymatics** — Chladni figures: standing-wave plate eigenmodes with sand collecting on nodal lines and speckle dancing at antinodes; sweeps through resonances with crossfade agitation; square and round plates.
+- Backend parameter schemas + App.tsx type mapping for all five
+
+### Fixed
+- **Fable Hyperspace KIFS mode rendered empty** — the morph parameter mapped to a 0–360° per-iteration rotation, but the Sierpinski sign-fold attractor degenerates past ~25° (verified numerically: ray hit rate falls from 0.54 at 0° to 0.00 at 30°). Morph now maps to 0–20°, and the KIFS distance estimate gets a 0.85 conservative factor since rotation makes it overshoot thin features.
+
 ## 2026-07-04
 
 ### Added — the Fable pattern collection (6 new built-ins)

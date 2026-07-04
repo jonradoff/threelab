@@ -10,6 +10,11 @@ import { FABLE_INK_GENERATORS } from './fableInk'
 import { FABLE_DREAMSCAPE_GENERATORS } from './fableDreamscape'
 import { FABLE_PHYSARUM_XL_GENERATORS } from './fablePhysarumXL'
 import { FABLE_FIREWORKS_GENERATORS } from './fableFireworks'
+import { FABLE_HYPERSPACE_GENERATORS } from './fableHyperspace'
+import { FABLE_MIRRORWORLD_GENERATORS } from './fableMirrorworld'
+import { FABLE_CAUSTICS_GENERATORS } from './fableCaustics'
+import { FABLE_CAJAL_GENERATORS } from './fableCajal'
+import { FABLE_CYMATICS_GENERATORS } from './fableCymatics'
 
 // ─── Lissajous ────────────────────────────────────────────────────────────
 
@@ -1041,4 +1046,9 @@ export const BUILTIN_GENERATORS: CompoundGeneratorDef[] = [
   ...FABLE_DREAMSCAPE_GENERATORS,
   ...FABLE_PHYSARUM_XL_GENERATORS,
   ...FABLE_FIREWORKS_GENERATORS,
+  ...FABLE_HYPERSPACE_GENERATORS,
+  ...FABLE_MIRRORWORLD_GENERATORS,
+  ...FABLE_CAUSTICS_GENERATORS,
+  ...FABLE_CAJAL_GENERATORS,
+  ...FABLE_CYMATICS_GENERATORS,
 ]
