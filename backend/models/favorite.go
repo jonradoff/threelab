@@ -24,8 +24,10 @@ type Favorite struct {
 // FavoritesShare stores a shared collection of favorites with a short code.
 type FavoritesShare struct {
 	ID        bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	UID       string        `bson:"uid,omitempty" json:"-"`
 	Code      string        `bson:"code" json:"code"`
 	Favorites []Favorite    `bson:"favorites" json:"favorites"`
 	Views     int64         `bson:"views" json:"views"`
 	CreatedAt time.Time     `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time     `bson:"updatedAt" json:"updatedAt"`
 }

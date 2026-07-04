@@ -341,3 +341,7 @@ export function createFavoritesShare(favorites: ApiFavorite[]): Promise<Favorite
 export function getFavoritesShare(code: string): Promise<FavoritesShareLink> {
   return request<FavoritesShareLink>(`/favorites-shares/${code}`)
 }
+
+export function getMyFavoritesShare(): Promise<FavoritesShareLink> {
+  return request<FavoritesShareLink>('/favorites-shares/mine')
+}

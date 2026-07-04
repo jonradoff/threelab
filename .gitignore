@@ -20,3 +20,4 @@ backend/threelab-server
 .vscode/
 .idea/
 *.sw?
+VIBECTL.md

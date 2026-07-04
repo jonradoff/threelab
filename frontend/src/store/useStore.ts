@@ -44,6 +44,7 @@ interface ThreelabState {
   favorites: Favorite[]
   favoritesViewIndex: number
   browseFavorites: boolean
+  favoritesShareCode: string | null
   animationResetCounter: number
   fullscreen: boolean
 
@@ -66,6 +67,7 @@ interface ThreelabState {
   resetAnimation: () => void
   toggleFullscreen: () => void
   syncFavorites: () => void
+  syncFavoritesShareCode: () => void
 }
 
 const useStore = create<ThreelabState>((set, get) => ({
@@ -78,6 +80,7 @@ const useStore = create<ThreelabState>((set, get) => ({
   favorites: loadFavoritesCache(),
   favoritesViewIndex: 0,
   browseFavorites: false,
+  favoritesShareCode: null,
   animationResetCounter: 0,
   fullscreen: false,
 
@@ -241,6 +244,8 @@ const useStore = create<ThreelabState>((set, get) => ({
         saveFavoritesCache(updated)
         return { favorites: updated }
       })
+      // Backend auto-syncs the share — fetch the updated code
+      get().syncFavoritesShareCode()
     }).catch(() => {
       // API failed — keep local version
     })
@@ -260,7 +265,10 @@ const useStore = create<ThreelabState>((set, get) => ({
     })
 
     // Persist to API
-    api.deleteFavorite(id).catch(() => {
+    api.deleteFavorite(id).then(() => {
+      // Backend auto-syncs the share — fetch the updated code
+      get().syncFavoritesShareCode()
+    }).catch(() => {
       // API failed — local already updated
     })
   },
@@ -296,9 +304,19 @@ const useStore = create<ThreelabState>((set, get) => ({
       // API unavailable — keep local cache
     })
   },
+
+  // Fetch the user's auto-generated favorites share code
+  syncFavoritesShareCode: () => {
+    api.getMyFavoritesShare().then((share) => {
+      set({ favoritesShareCode: share.code })
+    }).catch(() => {
+      set({ favoritesShareCode: null })
+    })
+  },
 }))
 
 // Sync favorites from server on app init
 useStore.getState().syncFavorites()
+useStore.getState().syncFavoritesShareCode()
 
 export default useStore

@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
 import { getDefaultCameraDistance, getDefaultParams, getPatternLabel } from '../patterns/PatternRegistry'
-import * as api from '../api/client'
 import ExportModal from './ExportModal'
 import PatternManager from './PatternManager'
 
@@ -15,6 +14,7 @@ export default function TopBar() {
   const browseFavorites = useStore((s) => s.browseFavorites)
   const setBrowseFavorites = useStore((s) => s.setBrowseFavorites)
   const removeFavorite = useStore((s) => s.removeFavorite)
+  const favoritesShareCode = useStore((s) => s.favoritesShareCode)
   const navigate = useNavigate()
 
   const [editingName, setEditingName] = useState(false)
@@ -23,8 +23,6 @@ export default function TopBar() {
   const [showPatterns, setShowPatterns] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
   const [slideshowInterval, setSlideshowInterval] = useState(8)
-  const [shareUrl, setShareUrl] = useState<string | null>(null)
-  const [shareLoading, setShareLoading] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const slideshowTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
@@ -113,31 +111,17 @@ export default function TopBar() {
     }
   }
 
-  const handleShareFavorites = async () => {
-    if (favorites.length === 0) return
-    setShareLoading(true)
-    setShareCopied(false)
-    try {
-      const resp = await api.createFavoritesShare(favorites)
-      const url = `${window.location.origin}/favorites/${resp.code}`
-      setShareUrl(url)
-    } catch (err) {
-      console.error('Failed to share favorites:', err)
-    } finally {
-      setShareLoading(false)
-    }
-  }
-
   const handleCopyShareUrl = async () => {
-    if (!shareUrl) return
+    if (!favoritesShareCode) return
+    const url = `${window.location.origin}/favorites/${favoritesShareCode}`
     try {
-      await navigator.clipboard.writeText(shareUrl)
+      await navigator.clipboard.writeText(url)
       setShareCopied(true)
       setTimeout(() => setShareCopied(false), 2000)
     } catch {
       // fallback
       const ta = document.createElement('textarea')
-      ta.value = shareUrl
+      ta.value = url
       document.body.appendChild(ta)
       ta.select()
       document.execCommand('copy')
@@ -295,14 +279,15 @@ export default function TopBar() {
               <option value={30}>30s</option>
             </select>
           )}
-          <button
-            onClick={handleShareFavorites}
-            disabled={shareLoading}
-            className={`text-[10px] transition-colors ${shareLoading ? 'text-gray-600' : 'text-gray-500 hover:text-cyan-400'}`}
-            title="Share slideshow link"
-          >
-            {shareLoading ? 'Sharing...' : 'Share'}
-          </button>
+          {favoritesShareCode && (
+            <button
+              onClick={handleCopyShareUrl}
+              className={`text-[10px] transition-colors ${shareCopied ? 'text-green-400' : 'text-gray-500 hover:text-cyan-400'}`}
+              title={`${window.location.origin}/favorites/${favoritesShareCode}`}
+            >
+              {shareCopied ? 'Link Copied!' : 'Copy Link'}
+            </button>
+          )}
           <button
             onClick={() => {
               setSlideshowActive(false)
@@ -329,49 +314,6 @@ export default function TopBar() {
         <PatternManager onClose={() => setShowPatterns(false)} />
       )}
 
-      {/* Share Slideshow Modal */}
-      {shareUrl && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]"
-          onClick={() => setShareUrl(null)}
-        >
-          <div
-            className="glass-panel-solid rounded-lg p-6 w-[440px] flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-200">Share Slideshow</h3>
-              <button
-                onClick={() => setShareUrl(null)}
-                className="text-gray-500 hover:text-gray-300"
-              >
-                {'\u2715'}
-              </button>
-            </div>
-            <p className="text-xs text-gray-400">
-              Anyone with this link can view your {favorites.length} favorite{favorites.length === 1 ? '' : 's'} as a slideshow.
-            </p>
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={shareUrl}
-                className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-xs text-gray-300 font-mono outline-none select-all"
-                onFocus={(e) => e.target.select()}
-              />
-              <button
-                onClick={handleCopyShareUrl}
-                className={`px-4 py-2 rounded text-xs transition-colors ${
-                  shareCopied
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
-                }`}
-              >
-                {shareCopied ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

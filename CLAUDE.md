@@ -1,3 +1,5 @@
+Read VIBECTL.md for current project status, deployment details, and issue context before starting work.
+
 # Threelab
 
 Generative art platform: React 19 + Three.js frontend, Go + MongoDB backend.

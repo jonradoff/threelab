@@ -139,7 +139,11 @@ func main() {
 	favRouter.HandleFunc("", h.AddFavorite).Methods("POST")
 	favRouter.HandleFunc("/{id}", h.DeleteFavorite).Methods("DELETE")
 
-	// Favorites share routes (public)
+	// Favorites share routes
+	// "mine" must be registered before the {code} wildcard to avoid being captured
+	favShareRouter := r.PathPrefix("/api/favorites-shares").Subrouter()
+	favShareRouter.Use(anonAuth)
+	favShareRouter.HandleFunc("/mine", h.GetMyFavoritesShare).Methods("GET")
 	r.HandleFunc("/api/favorites-shares", h.CreateFavoritesShare).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/favorites-shares/{code}", h.GetFavoritesShare).Methods("GET", "OPTIONS")
 
@@ -191,6 +195,14 @@ func main() {
 	r.HandleFunc("/healthz", healthz.Handler("1.0.0", checks, kpis)).Methods("GET")
 	// Keep /api/health for backward compatibility
 	r.HandleFunc("/api/health", healthz.Handler("1.0.0", checks, kpis)).Methods("GET")
+
+	// Serve frontend static files (production: embedded in dist/)
+	staticDir := os.Getenv("THREELAB_STATIC_DIR")
+	if staticDir != "" {
+		spa := &spaHandler{staticDir: http.Dir(staticDir)}
+		r.PathPrefix("/").Handler(spa)
+		log.Printf("Serving frontend from %s", staticDir)
+	}
 
 	handler := corsHandler.Handler(r)
 
@@ -279,5 +291,38 @@ func createAnonIndexes(ctx context.Context, anonCol, favCol, favSharesCol *mongo
 		Options: options.Index().SetUnique(true),
 	})
 
+	// Index for per-user favorites share lookup (sparse — legacy shares have no uid)
+	favSharesCol.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "uid", Value: 1}},
+		Options: options.Index().SetSparse(true),
+	})
+
 	fmt.Println("Anonymous indexes created")
+}
+
+// spaHandler serves static files and falls back to index.html for SPA routing.
+type spaHandler struct {
+	staticDir http.FileSystem
+}
+
+func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	dir := string(h.staticDir.(http.Dir))
+
+	// Try to open the file
+	f, err := h.staticDir.Open(path)
+	if err != nil {
+		// File not found — serve index.html for SPA routing
+		http.ServeFile(w, r, dir+"/index.html")
+		return
+	}
+
+	stat, err := f.Stat()
+	f.Close()
+	if err != nil || stat.IsDir() {
+		http.ServeFile(w, r, dir+"/index.html")
+		return
+	}
+
+	http.FileServer(h.staticDir).ServeHTTP(w, r)
 }

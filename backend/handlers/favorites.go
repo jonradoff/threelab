@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"math/big"
 	"net/http"
@@ -88,6 +89,9 @@ func (db *DB) AddFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 	fav.ID = res.InsertedID.(bson.ObjectID)
 
+	// Auto-sync the user's favorites share in the background
+	go db.syncFavoritesShare(uid)
+
 	writeJSON(w, http.StatusCreated, fav)
 }
 
@@ -116,6 +120,9 @@ func (db *DB) DeleteFavorite(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "favorite not found")
 		return
 	}
+
+	// Auto-sync the user's favorites share in the background
+	go db.syncFavoritesShare(uid)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
@@ -186,6 +193,107 @@ func (db *DB) GetFavoritesShare(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	writeJSON(w, http.StatusOK, share)
+}
+
+// GetMyFavoritesShare returns the current user's auto-generated favorites share link.
+// If no share exists yet but the user has favorites, it creates one (lazy init).
+func (db *DB) GetMyFavoritesShare(w http.ResponseWriter, r *http.Request) {
+	uid := middleware.GetAnonUID(r)
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "no identity")
+		return
+	}
+
+	var share models.FavoritesShare
+	err := db.FavoritesShares.FindOne(r.Context(), bson.M{"uid": uid}).Decode(&share)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// Lazy init: create share from existing favorites
+			db.syncFavoritesShare(uid)
+			// Try again after sync
+			err = db.FavoritesShares.FindOne(r.Context(), bson.M{"uid": uid}).Decode(&share)
+			if err != nil {
+				writeError(w, http.StatusNotFound, "no favorites share yet")
+				return
+			}
+			writeJSON(w, http.StatusOK, share)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "database error")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, share)
+}
+
+// syncFavoritesShare upserts the user's favorites share with their current favorites.
+// Called in the background after every add/remove.
+func (db *DB) syncFavoritesShare(uid string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Fetch all current favorites for this user
+	cursor, err := db.Favorites.Find(ctx, bson.M{"uid": uid})
+	if err != nil {
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var favs []models.Favorite
+	if err := cursor.All(ctx, &favs); err != nil {
+		return
+	}
+
+	now := time.Now()
+
+	if len(favs) == 0 {
+		// No favorites left — delete the share
+		db.FavoritesShares.DeleteOne(ctx, bson.M{"uid": uid})
+		return
+	}
+
+	// Clear UIDs from embedded favorites (they're user-private)
+	for i := range favs {
+		favs[i].UID = ""
+	}
+
+	// Try to find existing share for this user
+	var existing models.FavoritesShare
+	err = db.FavoritesShares.FindOne(ctx, bson.M{"uid": uid}).Decode(&existing)
+	if err == mongo.ErrNoDocuments {
+		// Create new share with a fresh code
+		var code string
+		for attempts := 0; attempts < 10; attempts++ {
+			code = generateFavCode()
+			count, _ := db.FavoritesShares.CountDocuments(ctx, bson.M{"code": code})
+			if count == 0 {
+				break
+			}
+		}
+
+		share := models.FavoritesShare{
+			UID:       uid,
+			Code:      code,
+			Favorites: favs,
+			Views:     0,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		db.FavoritesShares.InsertOne(ctx, share)
+		return
+	}
+	if err != nil {
+		return
+	}
+
+	// Update existing share — keep the same code, update favorites
+	db.FavoritesShares.UpdateOne(ctx,
+		bson.M{"uid": uid},
+		bson.M{"$set": bson.M{
+			"favorites": favs,
+			"updatedAt": now,
+		}},
+	)
 }
 
 func generateFavCode() string {
