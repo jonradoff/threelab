@@ -28,6 +28,7 @@ func AllPatternSchemas() []PatternSchema {
 	return []PatternSchema{
 		NetworkGraphSchema(),
 		PhysarumSchema(),
+		FablePhysarumSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -161,6 +162,42 @@ func PhysarumSchema() PatternSchema {
 			{Name: "brightness", Type: "float", Min: 0.3, Max: 3, Default: 1.2, Description: "Overall brightness of trails"},
 			{Name: "randomStrength", Type: "float", Min: 0, Max: 2, Default: 0.5, Description: "Random jitter in agent movement"},
 			{Name: "simResolution", Type: "int", Min: 256, Max: 1024, Default: 512, Description: "Pheromone field resolution — higher=finer detail"},
+		},
+	}
+}
+
+func FablePhysarumSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fablePhysarum",
+		Description: "High-fidelity slime mold with HDR iridescent trails, relief lighting, and living sensor dynamics",
+		Params: []ParamSchema{
+			{Name: "agentCount", Type: "int", Min: 10000, Max: 1048576, Default: 400000, Description: "Number of slime agents"},
+			{Name: "simResolution", Type: "int", Min: 256, Max: 2048, Default: 1024, Description: "Trail field resolution — higher=finer veins"},
+			{Name: "sensorAngle", Type: "float", Min: 5, Max: 85, Default: 26, Description: "Angle between sensors in degrees — lower=tighter veins"},
+			{Name: "sensorDistance", Type: "float", Min: 4, Max: 80, Default: 30, Description: "How far ahead agents sense the trail (texels)"},
+			{Name: "turnSpeed", Type: "float", Min: 5, Max: 120, Default: 34, Description: "Maximum turn angle per step in degrees"},
+			{Name: "moveSpeed", Type: "float", Min: 0.2, Max: 4, Default: 1.15, Description: "Movement speed in texels per step"},
+			{Name: "randomStrength", Type: "float", Min: 0, Max: 2, Default: 0.35, Description: "Random steering jitter"},
+			{Name: "pulse", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Sensor breathing amount — makes the network reorganize over time"},
+			{Name: "pulseSpeed", Type: "float", Min: 0, Max: 3, Default: 0.5, Description: "Sensor breathing speed"},
+			{Name: "decayRate", Type: "float", Min: 0.005, Max: 0.15, Default: 0.035, Description: "Trail evaporation rate — lower=longer trails"},
+			{Name: "diffuseSpeed", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "How quickly trails spread — lower=sharper veins"},
+			{Name: "depositAmount", Type: "float", Min: 0.5, Max: 20, Default: 4, Description: "Trail deposit strength per step"},
+			{Name: "stepsPerFrame", Type: "int", Min: 1, Max: 8, Default: 2, Description: "Simulation steps per frame"},
+			{Name: "spawnPattern", Type: "enum", Default: "uniform", Description: "Initial agent placement", EnumValues: []string{"bigBang", "ring", "spiral", "uniform", "clusters"}},
+			{Name: "boundary", Type: "enum", Default: "wrap", Description: "World boundary — wrap tiles seamlessly, dish confines to a petri dish", EnumValues: []string{"wrap", "dish"}},
+			{Name: "colorMode", Type: "enum", Default: "flow", Description: "flow=iridescent heading colors, palette=density gradient, duotone=two hues", EnumValues: []string{"flow", "palette", "duotone"}},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Cosine palette used in palette mode", EnumValues: []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 165, Description: "Base hue in degrees / palette shift"},
+			{Name: "secondaryHue", Type: "float", Min: 0, Max: 360, Default: 285, Description: "Secondary hue for duotone mode"},
+			{Name: "saturation", Type: "float", Min: 0, Max: 1, Default: 0.8, Description: "Color saturation"},
+			{Name: "hueCycle", Type: "float", Min: 0, Max: 0.5, Default: 0.05, Description: "Slow hue drift over time"},
+			{Name: "exposure", Type: "float", Min: 0.2, Max: 6, Default: 1.5, Description: "HDR exposure of the trail field"},
+			{Name: "contrast", Type: "float", Min: 0.5, Max: 2.5, Default: 1.3, Description: "Tone curve contrast"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 0.8, Description: "Halo glow intensity around dense trails"},
+			{Name: "relief", Type: "float", Min: 0, Max: 2, Default: 0.9, Description: "Relief lighting strength — embossed 3D vein look"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Edge vignette darkening"},
+			{Name: "mouseForce", Type: "float", Min: -2, Max: 2, Default: 0.8, Description: "Mouse influence — positive attracts, negative repels"},
 		},
 	}
 }

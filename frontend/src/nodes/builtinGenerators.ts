@@ -3,6 +3,7 @@ import type { ParamSchemaDef } from './storage'
 import { SHADER_GENERATORS } from './shaderGenerators'
 import { REMAINING_GENERATORS } from './remainingGenerators'
 import { NEW_SHADER_PATTERNS } from './newShaderPatterns'
+import { FABLE_PHYSARUM_GENERATORS } from './fablePhysarum'
 
 // ─── Lissajous ────────────────────────────────────────────────────────────
 
@@ -1027,4 +1028,5 @@ export const BUILTIN_GENERATORS: CompoundGeneratorDef[] = [
   ...SHADER_GENERATORS,
   ...REMAINING_GENERATORS,
   ...NEW_SHADER_PATTERNS,
+  ...FABLE_PHYSARUM_GENERATORS,
 ]

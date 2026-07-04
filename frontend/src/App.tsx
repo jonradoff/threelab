@@ -386,6 +386,7 @@ function buildFallbackSchemas(setPatternSchemas: (schemas: Record<string, Patter
         'Circle Packing': 'circlePacking',
         'Voxel Landscape': 'voxelLandscape',
         'Physarum': 'physarum',
+        'Fable Physarum': 'fablePhysarum',
         'Kaleidoscope': 'kaleidoscope',
         'Slime Mold': 'slimeMold',
         'Starfield': 'starfield',
