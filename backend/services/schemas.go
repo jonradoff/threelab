@@ -29,6 +29,12 @@ func AllPatternSchemas() []PatternSchema {
 		NetworkGraphSchema(),
 		PhysarumSchema(),
 		FablePhysarumSchema(),
+		FablePetriSchema(),
+		FableContinuumSchema(),
+		FableInkSchema(),
+		FableDreamscapeSchema(),
+		FablePhysarumXLSchema(),
+		FableFireworksSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -198,6 +204,177 @@ func FablePhysarumSchema() PatternSchema {
 			{Name: "relief", Type: "float", Min: 0, Max: 2, Default: 0.9, Description: "Relief lighting strength — embossed 3D vein look"},
 			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Edge vignette darkening"},
 			{Name: "mouseForce", Type: "float", Min: -2, Max: 2, Default: 0.8, Description: "Mouse influence — positive attracts, negative repels"},
+		},
+	}
+}
+
+var fablePaletteEnum = []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+
+func FablePetriSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fablePetri",
+		Description: "Multiple-neighborhood cellular automata — writhing amoebas, membranes, and mitosis in a living petri dish",
+		Params: []ParamSchema{
+			{Name: "simResolution", Type: "int", Min: 256, Max: 1024, Default: 512, Description: "Field resolution"},
+			{Name: "species", Type: "enum", Default: "primordial", Description: "MNCA rule species", EnumValues: []string{"primordial", "mitosis", "labyrinth", "tides", "storms"}},
+			{Name: "radiusScale", Type: "float", Min: 0.5, Max: 1.7, Default: 1, Description: "Neighborhood radius scale"},
+			{Name: "ruleStrength", Type: "float", Min: 0.1, Max: 1, Default: 1, Description: "Rule blend (1 = discrete, lower = fluid)"},
+			{Name: "thresholdShift", Type: "float", Min: -0.05, Max: 0.05, Default: 0, Description: "Global rule threshold shift"},
+			{Name: "biome", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Regional threshold drift"},
+			{Name: "stepsPerFrame", Type: "int", Min: 1, Max: 4, Default: 1, Description: "Simulation steps per frame"},
+			{Name: "seedPattern", Type: "enum", Default: "soup", Description: "Initial seeding", EnumValues: []string{"soup", "islands", "dots", "fine"}},
+			{Name: "seedDensity", Type: "float", Min: 0.1, Max: 0.9, Default: 0.5, Description: "Initial fill density"},
+			{Name: "palette", Type: "enum", Default: "abyss", Description: "Color palette", EnumValues: fablePaletteEnum},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Brightness"},
+			{Name: "relief", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Relief lighting strength"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 0.8, Description: "Activity glow"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Edge vignette"},
+			{Name: "mouseDraw", Type: "float", Min: -1, Max: 1, Default: 0.8, Description: "Mouse draws (+) or erases (−) cells"},
+		},
+	}
+}
+
+func FableContinuumSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fableContinuum",
+		Description: "SmoothLife — continuous artificial life with smooth gliding organisms and living membranes",
+		Params: []ParamSchema{
+			{Name: "simResolution", Type: "int", Min: 256, Max: 1024, Default: 512, Description: "Field resolution"},
+			{Name: "kernelRadius", Type: "float", Min: 5, Max: 12, Default: 9, Description: "Outer kernel radius"},
+			{Name: "birthLo", Type: "float", Min: 0.15, Max: 0.4, Default: 0.27, Description: "Birth interval low"},
+			{Name: "birthHi", Type: "float", Min: 0.2, Max: 0.5, Default: 0.34, Description: "Birth interval high"},
+			{Name: "surviveLo", Type: "float", Min: 0.3, Max: 0.65, Default: 0.52, Description: "Survival interval low"},
+			{Name: "surviveHi", Type: "float", Min: 0.5, Max: 0.9, Default: 0.75, Description: "Survival interval high"},
+			{Name: "alphaN", Type: "float", Min: 0.005, Max: 0.15, Default: 0.03, Description: "Transition sharpness (outer)"},
+			{Name: "alphaM", Type: "float", Min: 0.05, Max: 0.4, Default: 0.15, Description: "Aliveness sharpness (inner)"},
+			{Name: "timeStep", Type: "float", Min: 0.02, Max: 0.35, Default: 0.09, Description: "Integration speed dt"},
+			{Name: "stepsPerFrame", Type: "int", Min: 1, Max: 6, Default: 2, Description: "Simulation steps per frame"},
+			{Name: "seedDensity", Type: "float", Min: 0.1, Max: 0.9, Default: 0.4, Description: "Initial organism density"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Color palette", EnumValues: fablePaletteEnum},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.2, Description: "Brightness"},
+			{Name: "relief", Type: "float", Min: 0, Max: 2, Default: 1.1, Description: "Relief lighting strength"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Activity glow"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Edge vignette"},
+			{Name: "mouseDraw", Type: "float", Min: -1, Max: 1, Default: 0.8, Description: "Mouse feeds (+) or kills (−) organisms"},
+		},
+	}
+}
+
+func FableInkSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fableInk",
+		Description: "Navier-Stokes fluid ink — swirling turbulent dye stirred by the mouse and orbiting emitters",
+		Params: []ParamSchema{
+			{Name: "dyeResolution", Type: "int", Min: 256, Max: 2048, Default: 1024, Description: "Dye texture resolution"},
+			{Name: "simResolution", Type: "int", Min: 64, Max: 512, Default: 256, Description: "Velocity field resolution"},
+			{Name: "pressureIterations", Type: "int", Min: 10, Max: 50, Default: 24, Description: "Jacobi pressure iterations"},
+			{Name: "curlStrength", Type: "float", Min: 0, Max: 60, Default: 28, Description: "Vorticity confinement"},
+			{Name: "simSpeed", Type: "float", Min: 0.3, Max: 3, Default: 1, Description: "Simulation speed"},
+			{Name: "velocityFade", Type: "float", Min: 0, Max: 0.5, Default: 0.08, Description: "Velocity dissipation per second"},
+			{Name: "inkFade", Type: "float", Min: 0.02, Max: 1.5, Default: 0.35, Description: "Ink dissipation per second"},
+			{Name: "emitters", Type: "int", Min: 0, Max: 5, Default: 3, Description: "Orbiting ink emitters"},
+			{Name: "emitterOrbit", Type: "float", Min: 0.05, Max: 0.45, Default: 0.28, Description: "Emitter orbit radius"},
+			{Name: "emitterSpeed", Type: "float", Min: 0, Max: 2, Default: 0.55, Description: "Emitter orbit speed"},
+			{Name: "emitterPower", Type: "float", Min: 0, Max: 3, Default: 1, Description: "Emitter force strength"},
+			{Name: "splatRadius", Type: "float", Min: 0.002, Max: 0.05, Default: 0.012, Description: "Splat gaussian radius"},
+			{Name: "inkMode", Type: "enum", Default: "dye", Description: "Raw ink colors or palette remap", EnumValues: []string{"dye", "palette"}},
+			{Name: "palette", Type: "enum", Default: "abyss", Description: "Palette", EnumValues: fablePaletteEnum},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Hue shift for emitter inks"},
+			{Name: "hueCycle", Type: "float", Min: 0, Max: 0.5, Default: 0.08, Description: "Emitter hue drift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 4, Default: 1.3, Description: "Brightness"},
+			{Name: "shading", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Volumetric ink shading"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Edge vignette"},
+			{Name: "mouseForce", Type: "float", Min: 0, Max: 4, Default: 1.5, Description: "Mouse stirring force"},
+		},
+	}
+}
+
+func FableDreamscapeSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fableDreamscape",
+		Description: "Raymarched procedural 3D dreamworld — organic forms to infinity with soft shadows, glowing cores, and fog",
+		Params: []ParamSchema{
+			{Name: "structure", Type: "enum", Default: "blobs", Description: "World structure", EnumValues: []string{"blobs", "columns", "arches", "crystals"}},
+			{Name: "repetition", Type: "float", Min: 2.5, Max: 10, Default: 4.5, Description: "Feature spacing"},
+			{Name: "shapeMorph", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Shape morphing amount"},
+			{Name: "warp", Type: "float", Min: 0, Max: 0.6, Default: 0.12, Description: "Dream distortion"},
+			{Name: "cameraSpeed", Type: "float", Min: 0, Max: 3, Default: 0.7, Description: "Flythrough speed"},
+			{Name: "cameraHeight", Type: "float", Min: 0.2, Max: 4, Default: 1.1, Description: "Camera height"},
+			{Name: "swayAmount", Type: "float", Min: 0, Max: 2, Default: 0.8, Description: "Camera sway"},
+			{Name: "fogDensity", Type: "float", Min: 0.01, Max: 0.3, Default: 0.07, Description: "Fog density"},
+			{Name: "lightAngle", Type: "float", Min: 0, Max: 360, Default: 35, Description: "Sun direction"},
+			{Name: "emberGlow", Type: "float", Min: 0, Max: 2.5, Default: 1, Description: "Emissive core glow"},
+			{Name: "quality", Type: "float", Min: 0, Max: 1, Default: 0.7, Description: "Raymarch quality"},
+			{Name: "palette", Type: "enum", Default: "ember", Description: "World palette", EnumValues: fablePaletteEnum},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.05, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Vignette"},
+		},
+	}
+}
+
+func FablePhysarumXLSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fablePhysarumXL",
+		Description: "Three slime mold populations that chase, flee, or entwine — dueling colored networks with emergent territories",
+		Params: []ParamSchema{
+			{Name: "agentCount", Type: "int", Min: 30000, Max: 1048576, Default: 600000, Description: "Total agents"},
+			{Name: "simResolution", Type: "int", Min: 256, Max: 2048, Default: 1024, Description: "Trail field resolution"},
+			{Name: "personality", Type: "enum", Default: "trinity", Description: "Population behavior bank", EnumValues: []string{"trinity", "rivals", "predator", "symbiosis", "ghosts"}},
+			{Name: "sensorScale", Type: "float", Min: 0.4, Max: 2.5, Default: 1, Description: "Sensor distance scale"},
+			{Name: "speedScale", Type: "float", Min: 0.4, Max: 2.5, Default: 1, Description: "Move speed scale"},
+			{Name: "turnScale", Type: "float", Min: 0.4, Max: 2.5, Default: 1, Description: "Turn speed scale"},
+			{Name: "interaction", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Cross-population interaction strength"},
+			{Name: "randomStrength", Type: "float", Min: 0, Max: 2, Default: 0.35, Description: "Random steering jitter"},
+			{Name: "pulse", Type: "float", Min: 0, Max: 1, Default: 0.2, Description: "Sensor breathing"},
+			{Name: "pulseSpeed", Type: "float", Min: 0, Max: 3, Default: 0.5, Description: "Breathing speed"},
+			{Name: "decayRate", Type: "float", Min: 0.005, Max: 0.15, Default: 0.04, Description: "Trail decay"},
+			{Name: "diffuseSpeed", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Trail diffusion"},
+			{Name: "depositAmount", Type: "float", Min: 0.5, Max: 20, Default: 4, Description: "Deposit strength"},
+			{Name: "stepsPerFrame", Type: "int", Min: 1, Max: 6, Default: 2, Description: "Steps per frame"},
+			{Name: "spawnPattern", Type: "enum", Default: "mixed", Description: "Spawn arrangement", EnumValues: []string{"mixed", "zones", "rings"}},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 140, Description: "Population 1 hue"},
+			{Name: "hueSpread", Type: "float", Min: 30, Max: 180, Default: 120, Description: "Hue separation between populations"},
+			{Name: "saturation", Type: "float", Min: 0, Max: 1, Default: 0.85, Description: "Color saturation"},
+			{Name: "exposure", Type: "float", Min: 0.2, Max: 6, Default: 1.5, Description: "HDR exposure"},
+			{Name: "contrast", Type: "float", Min: 0.5, Max: 2.5, Default: 1.25, Description: "Tone contrast"},
+			{Name: "relief", Type: "float", Min: 0, Max: 2, Default: 0.8, Description: "Relief lighting"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Vignette"},
+			{Name: "mouseForce", Type: "float", Min: -2, Max: 2, Default: 0.8, Description: "Mouse attract (+) / repel (−)"},
+		},
+	}
+}
+
+func FableFireworksSchema() PatternSchema {
+	return PatternSchema{
+		PatternType: "fableFireworks",
+		Description: "A pyrotechnic night show over water — peonies, willows, palms, and crossettes with rockets, trails, skyline, and reflections",
+		Params: []ParamSchema{
+			{Name: "showStyle", Type: "enum", Default: "classic", Description: "Show choreography", EnumValues: []string{"classic", "finale", "goldenWillow", "rainbow"}},
+			{Name: "launchRate", Type: "float", Min: 0.2, Max: 4, Default: 1.5, Description: "Shells per second"},
+			{Name: "shellSize", Type: "float", Min: 0.5, Max: 2, Default: 1, Description: "Burst size"},
+			{Name: "gravity", Type: "float", Min: 0.02, Max: 0.3, Default: 0.11, Description: "Gravity strength"},
+			{Name: "drag", Type: "float", Min: 0.6, Max: 4, Default: 1.7, Description: "Air drag"},
+			{Name: "trailPersistence", Type: "float", Min: 0.82, Max: 0.985, Default: 0.93, Description: "Star trail persistence"},
+			{Name: "windX", Type: "float", Min: -1, Max: 1, Default: 0.12, Description: "Wind drift"},
+			{Name: "smokeRise", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Trail rise"},
+			{Name: "particleDensity", Type: "int", Min: 96, Max: 256, Default: 160, Description: "Particle texture side"},
+			{Name: "simResolution", Type: "int", Min: 512, Max: 2048, Default: 1024, Description: "Trail buffer resolution"},
+			{Name: "skyline", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "City skyline height"},
+			{Name: "reflection", Type: "float", Min: 0, Max: 1, Default: 0.65, Description: "Water reflection strength"},
+			{Name: "starAmount", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Background stars"},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Hue shift (rainbow style)"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 4, Default: 1.6, Description: "Brightness"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Vignette"},
+			{Name: "mouseLaunch", Type: "bool", Default: true, Description: "Fast mouse moves launch a shell at the cursor"},
 		},
 	}
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-04
+
+### Added — the Fable pattern collection (6 new built-ins)
+- **Fable Ink** — Navier-Stokes fluid ink (GPU Gems ch. 38): semi-Lagrangian advection, vorticity confinement, Jacobi pressure solve on a torus; dual-resolution velocity/dye; orbiting color emitters; stir with the mouse. Framerate-independent physics.
+- **Fable Petri** — Multiple-Neighborhood Cellular Automata (Slackermanz MNCA): ring/disc neighborhoods with sequential interval rules; five species presets; biome threshold drift; draw/erase with the mouse.
+- **Fable Continuum** — SmoothLife (Rafler): continuous-space artificial life with gliding nucleus-and-membrane organisms; known-good ruleset defaults; feed/kill with the mouse.
+- **Fable Dreamscape** — SDF raymarching: infinite procedural 3D dreamworld (blobs/columns/arches/crystals) with smooth-min blending, soft shadows, AO, emissive glow accumulation, fog, and a drifting flythrough camera.
+- **Fable Physarum XL** — three interacting slime mold populations with per-population sensory personalities and a cross-attraction/avoidance matrix (trinity, rivals, predator, symbiosis, ghosts); up to 1M agents.
+- **Fable Fireworks** — analytic pyrotechnics over water: closed-form ballistic stars (drag + gravity), authentic shell types (peony, chrysanthemum, willow, palm, ring, crossette), rocket ascents, show choreographies, HDR trails with wind/smoke drift, city skyline, water reflections; fast mouse moves launch shells.
+- Shared Fable display library: ACES tone mapping, IQ cosine palettes, film grain, vignette, dithering (`fableDisplayLib.ts`)
+- Backend parameter schemas for all six new patterns
+
+### Fixed
+- ShaderRenderer initData uploads no longer tone-map or force alpha to 1.0 — raw RGBA data (per-agent traits, population IDs, angles >1) now survives texture initialization. This was silently degrading all agent-texture patterns.
+
 ## 2026-07-03
 
 ### Added

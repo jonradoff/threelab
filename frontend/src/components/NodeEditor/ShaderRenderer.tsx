@@ -269,6 +269,11 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
         initTex.needsUpdate = true
 
         const initMat = new THREE.MeshBasicMaterial({ map: initTex })
+        // Raw data upload: tone mapping would clamp/warp values >1, and the
+        // opaque path forces alpha to 1.0 (destroying the .w channel) —
+        // NoBlending disables the OPAQUE define and writes RGBA verbatim
+        initMat.toneMapped = false
+        initMat.blending = THREE.NoBlending
         const initMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), initMat)
         const initScene = new THREE.Scene()
         initScene.add(initMesh)

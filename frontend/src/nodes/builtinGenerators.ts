@@ -4,6 +4,12 @@ import { SHADER_GENERATORS } from './shaderGenerators'
 import { REMAINING_GENERATORS } from './remainingGenerators'
 import { NEW_SHADER_PATTERNS } from './newShaderPatterns'
 import { FABLE_PHYSARUM_GENERATORS } from './fablePhysarum'
+import { FABLE_PETRI_GENERATORS } from './fablePetri'
+import { FABLE_CONTINUUM_GENERATORS } from './fableContinuum'
+import { FABLE_INK_GENERATORS } from './fableInk'
+import { FABLE_DREAMSCAPE_GENERATORS } from './fableDreamscape'
+import { FABLE_PHYSARUM_XL_GENERATORS } from './fablePhysarumXL'
+import { FABLE_FIREWORKS_GENERATORS } from './fableFireworks'
 
 // ─── Lissajous ────────────────────────────────────────────────────────────
 
@@ -1029,4 +1035,10 @@ export const BUILTIN_GENERATORS: CompoundGeneratorDef[] = [
   ...REMAINING_GENERATORS,
   ...NEW_SHADER_PATTERNS,
   ...FABLE_PHYSARUM_GENERATORS,
+  ...FABLE_PETRI_GENERATORS,
+  ...FABLE_CONTINUUM_GENERATORS,
+  ...FABLE_INK_GENERATORS,
+  ...FABLE_DREAMSCAPE_GENERATORS,
+  ...FABLE_PHYSARUM_XL_GENERATORS,
+  ...FABLE_FIREWORKS_GENERATORS,
 ]
