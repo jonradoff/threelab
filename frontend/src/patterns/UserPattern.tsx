@@ -45,6 +45,8 @@ export default function UserPattern({ params }: Props) {
       edges={graph.edges}
       params={params}
       renderOrder={layerIndex !== undefined ? 1000 + layerIndex : undefined}
+      layerOpacity={typeof params.__opacity === 'number' ? params.__opacity : 1}
+      layerBlendMode={typeof params.__blendMode === 'string' ? params.__blendMode : 'normal'}
     />
   )
 }

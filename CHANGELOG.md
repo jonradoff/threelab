@@ -17,6 +17,9 @@
 - **Fable Credits Roll** — multi-line scrolling credits (`|` separates lines, `*` marks headings) with fade zones.
 - Backend schemas + App.tsx type mapping for all seven
 
+### Fixed
+- Layer opacity slider and blend-mode dropdown now actually work for shader patterns — they were stored on the layer but never reached the materials. Opacity is injected as a shader wrapper (blend-aware: alpha for normal/additive, rgb for screen, fade-to-white for multiply); blend modes map to proper GL blending, including a multiply that leaves uncovered pixels intact.
+
 ## 2026-07-04 (second drop)
 
 ### Added — five more Fable patterns

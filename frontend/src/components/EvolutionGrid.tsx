@@ -37,7 +37,7 @@ function MiniPreview({ genome }: { genome: Genome }) {
         return (
           <group key={`${layer.patternType}-${idx}`} renderOrder={idx}>
             <Suspense fallback={null}>
-              <PatternComponent params={{ ...params, __layerIndex: idx }} />
+              <PatternComponent params={{ ...params, __layerIndex: idx, __opacity: layer.opacity ?? 1, __blendMode: layer.blendMode ?? 'normal' }} />
             </Suspense>
           </group>
         )

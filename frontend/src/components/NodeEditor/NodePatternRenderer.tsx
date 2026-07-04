@@ -38,6 +38,8 @@ interface Props {
   edges: Edge[]
   params: Record<string, unknown>
   renderOrder?: number
+  layerOpacity?: number
+  layerBlendMode?: string
 }
 
 function updateGeometry(
@@ -68,7 +70,7 @@ function updateGeometry(
   geo.setDrawRange(0, draw)
 }
 
-export default function NodePatternRenderer({ nodes, edges, params, renderOrder }: Props) {
+export default function NodePatternRenderer({ nodes, edges, params, renderOrder, layerOpacity, layerBlendMode }: Props) {
   const groupRef = useRef<THREE.Group>(null)
   const frameStateRef = useRef(new Map<string, unknown>())
   const interaction = useInteraction()
@@ -221,7 +223,7 @@ export default function NodePatternRenderer({ nodes, edges, params, renderOrder 
           depthWrite={!(meshOutputRef.current?.wireframe)}
         />
       </mesh>
-      <ShaderRenderer configRef={shaderOutputRef} renderOrder={renderOrder} />
+      <ShaderRenderer configRef={shaderOutputRef} renderOrder={renderOrder} layerOpacity={layerOpacity} layerBlendMode={layerBlendMode} />
     </group>
   )
 }

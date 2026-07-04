@@ -88,9 +88,56 @@ function buildInitialUniforms(uniforms: Record<string, unknown>): Record<string,
 interface Props {
   configRef: React.RefObject<GraphOutputData | null>
   renderOrder?: number
+  layerOpacity?: number
+  layerBlendMode?: string
 }
 
-export default function ShaderRenderer({ configRef, renderOrder }: Props) {
+// Wrap a display fragment shader so the layer opacity slider works: the
+// user's main is renamed and a new main scales the output. How opacity is
+// applied depends on the blend equation (uLayerBlendK: 0 = alpha-based
+// normal/additive, 1 = screen scales rgb, 2 = multiply fades toward white).
+function wrapFragForLayer(frag: string): string {
+  if (!frag.includes('void main')) return frag
+  return frag.replace('void main', 'void fableUserMain') + `
+uniform float uLayerOpacity;
+uniform float uLayerBlendK;
+void main() {
+  fableUserMain();
+  gl_FragColor.a *= uLayerOpacity;
+  if (uLayerBlendK > 0.5 && uLayerBlendK < 1.5) {
+    gl_FragColor.rgb *= uLayerOpacity;
+  } else if (uLayerBlendK > 1.5) {
+    gl_FragColor.rgb = mix(vec3(1.0), gl_FragColor.rgb, uLayerOpacity);
+  }
+}
+`
+}
+
+function applyLayerBlending(mat: THREE.ShaderMaterial, mode: string | undefined, opacity: number) {
+  if (mode === 'additive') {
+    mat.blending = THREE.AdditiveBlending
+  } else if (mode === 'screen') {
+    mat.blending = THREE.CustomBlending
+    mat.blendEquation = THREE.AddEquation
+    mat.blendSrc = THREE.OneFactor
+    mat.blendDst = THREE.OneMinusSrcColorFactor
+  } else if (mode === 'multiply') {
+    // src*dst where covered, dst where transparent (unlike THREE's
+    // MultiplyBlending, which blacks out uncovered pixels)
+    mat.blending = THREE.CustomBlending
+    mat.blendEquation = THREE.AddEquation
+    mat.blendSrc = THREE.DstColorFactor
+    mat.blendDst = THREE.OneMinusSrcAlphaFactor
+  } else {
+    mat.blending = THREE.NormalBlending
+  }
+  mat.transparent = true
+  const blendK = mode === 'screen' ? 1 : (mode === 'multiply' ? 2 : 0)
+  if (mat.uniforms.uLayerOpacity) mat.uniforms.uLayerOpacity.value = opacity
+  if (mat.uniforms.uLayerBlendK) mat.uniforms.uLayerBlendK.value = blendK
+}
+
+export default function ShaderRenderer({ configRef, renderOrder, layerOpacity, layerBlendMode }: Props) {
   const meshRef = useRef<THREE.Mesh>(null)
   const materialRef = useRef<THREE.ShaderMaterial | null>(null)
   const lastCodeRef = useRef({ vert: '', frag: '' })
@@ -175,9 +222,11 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
       materialRef.current?.dispose()
       const baseUniforms = config.uniforms ? buildInitialUniforms(config.uniforms) : {}
       baseUniforms['uCameraZoom'] = { value: getCameraZoomFactor() }
+      baseUniforms['uLayerOpacity'] = { value: layerOpacity ?? 1 }
+      baseUniforms['uLayerBlendK'] = { value: 0 }
       materialRef.current = new THREE.ShaderMaterial({
         vertexShader: vert,
-        fragmentShader: frag,
+        fragmentShader: wrapFragForLayer(frag),
         uniforms: baseUniforms,
         depthWrite: false,
         depthTest: false,
@@ -189,9 +238,10 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
       applyUniforms(materialRef.current, config.uniforms)
     }
 
-    // Apply camera distance as zoom
+    // Apply camera distance as zoom + layer opacity/blend
     if (materialRef.current) {
       applyCameraZoom(materialRef.current)
+      applyLayerBlending(materialRef.current, layerBlendMode, layerOpacity ?? 1)
     }
   }
 
@@ -310,10 +360,12 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
           const vert = pass.vertexShader ?? (isDisplayPass ? DEFAULT_VERT : SIM_VERT)
           if (isDisplayPass) {
             passUniforms['uCameraZoom'] = { value: getCameraZoomFactor() }
+            passUniforms['uLayerOpacity'] = { value: layerOpacity ?? 1 }
+            passUniforms['uLayerBlendK'] = { value: 0 }
           }
           mat = new THREE.ShaderMaterial({
             vertexShader: vert,
-            fragmentShader: pass.fragmentShader,
+            fragmentShader: isDisplayPass ? wrapFragForLayer(pass.fragmentShader) : pass.fragmentShader,
             uniforms: passUniforms,
             depthWrite: false,
             depthTest: false,
@@ -347,9 +399,10 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
           applyUniforms(mat, pass.uniforms)
         }
 
-        // Apply camera zoom only to display passes (not simulation passes)
+        // Apply camera zoom + layer opacity/blend only to display passes
         if (!pass.target) {
           applyCameraZoom(mat)
+          applyLayerBlending(mat, layerBlendMode, layerOpacity ?? 1)
         }
 
         if (pass.target) {
