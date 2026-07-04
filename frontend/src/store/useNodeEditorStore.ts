@@ -106,6 +106,10 @@ const useNodeEditorStore = create<NodeEditorState>((set, get) => ({
         } else if (paramType === 'bool') {
           graph.defaultParams[name] = !!defaultValue
           schema.push({ name, type: 'bool', default: !!defaultValue, description: name })
+        } else if (paramType === 'text') {
+          const defaultText = (d.defaultText as string) ?? ''
+          graph.defaultParams[name] = defaultText
+          schema.push({ name, type: 'text', default: defaultText, description: name })
         } else {
           graph.defaultParams[name] = defaultValue
           schema.push({ name, type: paramType as 'float' | 'int', min, max, default: defaultValue, description: name })

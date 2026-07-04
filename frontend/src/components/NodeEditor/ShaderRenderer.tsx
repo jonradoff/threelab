@@ -317,6 +317,9 @@ export default function ShaderRenderer({ configRef, renderOrder }: Props) {
             uniforms: passUniforms,
             depthWrite: false,
             depthTest: false,
+            // Display passes alpha-composite over lower layers (overlay
+            // patterns rely on this); sim passes write raw data to targets.
+            transparent: isDisplayPass,
           })
           passMatsRef.current.set(pass.name, mat)
           lastPassCodeRef.current.set(pass.name, pass.fragmentShader)

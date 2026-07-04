@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-04 (third drop) — text motion graphics
+
+### Added — text overlay infrastructure
+- New `text` parameter type end-to-end: text input in the parameter panel (seeded "Enter text here"), carried as a string through the node graph, excluded from Shuffle and from client- and server-side evolution — text never randomizes.
+- Shared text engine (`fableTextLib.ts`): Canvas2D rasterization into float textures (multi-line, alignment, 5 font stacks, weights, letter-spacing) + an exact Euclidean distance transform producing SDF text — crisp at any scale, enabling outlines, glow, tubes, and 3D extrusion.
+- Multipass display passes now alpha-composite over lower layers (`transparent: true`), so text patterns work as true overlays on any generative pattern.
+
+### Added — 7 text motion-graphics patterns (all alpha overlays)
+- **Fable Type** — kinetic 2D typography: static/drift/wave/bounce/orbit/typewriter/pulse/shake motion, solid/gradient/outline/neon fills, full position/size/rotation control, optional legibility backdrop.
+- **Fable Lower Thirds** — broadcast title+subtitle on a glass/solid/gradient/minimal panel with a leading accent bar and shine sweep; slide-in → hold → slide-out loop or always-on.
+- **Fable Type 3D** — raymarched SDF-extruded text with beveled edges, keylight/rim/specular, palette faces vs side walls; orbit/tumble/flip/swing or a fixed user-set angle.
+- **Fable Ticker** — seamless news-crawl strip with separator glyphs, bar styles, either direction, edge fade.
+- **Fable Neon Sign** — SDF iso-band as glass tube: hot white core, colored gas, wide bloom, buzzing segment dropouts.
+- **Fable Title Card** — cinematic centered title with divider wipe, letterbox bars, background dim, slow push-in.
+- **Fable Credits Roll** — multi-line scrolling credits (`|` separates lines, `*` marks headings) with fade zones.
+- Backend schemas + App.tsx type mapping for all seven
+
 ## 2026-07-04 (second drop)
 
 ### Added — five more Fable patterns

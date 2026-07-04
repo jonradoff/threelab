@@ -263,6 +263,29 @@ export default function ParameterPanel() {
       )
     }
 
+    if (param.type === 'text') {
+      const textValue = typeof value === 'string' ? value : String(param.default ?? '')
+      return (
+        <div key={param.name} className="mb-3">
+          <div className="flex items-center gap-1 mb-1">
+            <label
+              className="text-[11px] text-gray-400"
+              title={param.description}
+            >
+              {param.name}
+            </label>
+          </div>
+          <input
+            type="text"
+            value={textValue}
+            onChange={(e) => handleParamChange(param.name, e.target.value)}
+            placeholder="Enter text here"
+            className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-gray-300 outline-none focus:border-cyan-400/30 placeholder:text-gray-600"
+          />
+        </div>
+      )
+    }
+
     if (param.type === 'enum') {
       const strValue = typeof value === 'string' ? value : String(param.default)
       return (

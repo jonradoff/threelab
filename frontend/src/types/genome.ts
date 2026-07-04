@@ -96,7 +96,7 @@ export interface Ratings {
 
 export interface ParameterSchema {
   name: string
-  type: 'int' | 'float' | 'bool' | 'enum' | 'color' | 'colors'
+  type: 'int' | 'float' | 'bool' | 'enum' | 'color' | 'colors' | 'text'
   min?: number
   max?: number
   default: unknown

@@ -180,12 +180,17 @@ const NODE_DEFS: PatternNodeDef[] = [
       { name: 'min', type: 'number', default: 0, label: 'Min' },
       { name: 'max', type: 'number', default: 1, label: 'Max' },
       { name: 'enumValues', type: 'string', default: '', label: 'Enum Values' },
+      { name: 'defaultText', type: 'string', default: '', label: 'Default Text' },
     ],
     evaluate: (_inputs, data, ctx) => {
       const name = (data.paramName as string) ?? 'myParam'
       const paramType = (data.paramType as string) ?? 'float'
       const def = (data.defaultValue as number) ?? 0
       const val = ctx.params[name]
+      if (paramType === 'text') {
+        // Text params carry the string through the graph untouched
+        return { value: typeof val === 'string' ? val : ((data.defaultText as string) ?? '') }
+      }
       if (paramType === 'enum') {
         // Enum: value stored as string in params, output as index
         const enumStr = (data.enumValues as string) ?? ''

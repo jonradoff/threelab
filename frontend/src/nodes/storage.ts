@@ -3,7 +3,7 @@ import type { PortDef, Category } from './types'
 
 export interface ParamSchemaDef {
   name: string
-  type: 'float' | 'int' | 'bool' | 'enum'
+  type: 'float' | 'int' | 'bool' | 'enum' | 'text'
   min?: number
   max?: number
   default: unknown

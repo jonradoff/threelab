@@ -49,6 +49,7 @@ function paramTypeToNodeType(type: ParamSchemaDef['type']): string {
     case 'int': return 'int'
     case 'bool': return 'bool'
     case 'enum': return 'enum'
+    case 'text': return 'text'
     default: return 'float'
   }
 }
@@ -85,6 +86,9 @@ export function buildGraphFromGenerator(def: CompoundGeneratorDef): UserPatternG
     }
     if (param.type === 'enum' && param.enumValues) {
       data.enumValues = param.enumValues.join(',')
+    }
+    if (param.type === 'text') {
+      data.defaultText = (param.default as string) ?? ''
     }
 
     nodes.push({

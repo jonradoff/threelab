@@ -15,6 +15,13 @@ import { FABLE_MIRRORWORLD_GENERATORS } from './fableMirrorworld'
 import { FABLE_CAUSTICS_GENERATORS } from './fableCaustics'
 import { FABLE_CAJAL_GENERATORS } from './fableCajal'
 import { FABLE_CYMATICS_GENERATORS } from './fableCymatics'
+import { FABLE_TYPE_GENERATORS } from './fableType'
+import { FABLE_LOWER_THIRDS_GENERATORS } from './fableLowerThirds'
+import { FABLE_TYPE_3D_GENERATORS } from './fableType3D'
+import { FABLE_TICKER_GENERATORS } from './fableTicker'
+import { FABLE_NEON_SIGN_GENERATORS } from './fableNeonSign'
+import { FABLE_TITLE_CARD_GENERATORS } from './fableTitleCard'
+import { FABLE_CREDITS_GENERATORS } from './fableCredits'
 
 // ─── Lissajous ────────────────────────────────────────────────────────────
 
@@ -1051,4 +1058,11 @@ export const BUILTIN_GENERATORS: CompoundGeneratorDef[] = [
   ...FABLE_CAUSTICS_GENERATORS,
   ...FABLE_CAJAL_GENERATORS,
   ...FABLE_CYMATICS_GENERATORS,
+  ...FABLE_TYPE_GENERATORS,
+  ...FABLE_LOWER_THIRDS_GENERATORS,
+  ...FABLE_TYPE_3D_GENERATORS,
+  ...FABLE_TICKER_GENERATORS,
+  ...FABLE_NEON_SIGN_GENERATORS,
+  ...FABLE_TITLE_CARD_GENERATORS,
+  ...FABLE_CREDITS_GENERATORS,
 ]

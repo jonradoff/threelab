@@ -8,7 +8,7 @@ import (
 // ParamSchema describes a single parameter for a pattern type.
 type ParamSchema struct {
 	Name        string   `json:"name"`
-	Type        string   `json:"type"` // int, float, bool, enum, color, colors
+	Type        string   `json:"type"` // int, float, bool, enum, color, colors, text (text is never mutated/randomized)
 	Min         float64  `json:"min,omitempty"`
 	Max         float64  `json:"max,omitempty"`
 	Default     any      `json:"default"`
@@ -40,6 +40,13 @@ func AllPatternSchemas() []PatternSchema {
 		FableCausticsSchema(),
 		FableCajalSchema(),
 		FableCymaticsSchema(),
+		FableTypeSchema(),
+		FableLowerThirdsSchema(),
+		FableType3DSchema(),
+		FableTickerSchema(),
+		FableNeonSignSchema(),
+		FableTitleCardSchema(),
+		FableCreditsSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -516,6 +523,211 @@ func FableCymaticsSchema() PatternSchema {
 			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.15, Description: "Exposure"},
 			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Film grain"},
 			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Vignette"},
+		},
+	}
+}
+
+var fableFontNames = []string{"sans", "serif", "mono", "display", "script"}
+var fableWeightNames = []string{"light", "regular", "bold", "black"}
+
+func FableTypeSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableType",
+		Description: "Kinetic typography overlay — your text with drift, wave, bounce, typewriter and neon styles, or held perfectly static",
+		Params: []ParamSchema{
+			{Name: "text", Type: "text", Default: "Enter text here", Description: "Text to display"},
+			{Name: "font", Type: "enum", Default: "sans", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "weight", Type: "enum", Default: "bold", Description: "Font weight", EnumValues: fableWeightNames},
+			{Name: "letterSpacing", Type: "float", Min: 0, Max: 0.5, Default: 0.02, Description: "Letter spacing (em)"},
+			{Name: "motion", Type: "enum", Default: "drift", Description: "Motion mode (static = no movement)", EnumValues: []string{"static", "drift", "wave", "bounce", "orbit", "typewriter", "pulse", "shake"}},
+			{Name: "motionSpeed", Type: "float", Min: 0, Max: 3, Default: 1, Description: "Motion speed"},
+			{Name: "motionAmount", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Motion amplitude"},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Horizontal position"},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Vertical position"},
+			{Name: "size", Type: "float", Min: 0.05, Max: 1.5, Default: 0.34, Description: "Text size"},
+			{Name: "rotation", Type: "float", Min: -180, Max: 180, Default: 0, Description: "Rotation (degrees)"},
+			{Name: "fillStyle", Type: "enum", Default: "gradient", Description: "Fill style", EnumValues: []string{"solid", "gradient", "outline", "neon"}},
+			{Name: "fillTone", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Palette tone (solid/outline/neon)"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 0.5, Description: "Glow halo"},
+			{Name: "outlineWidth", Type: "float", Min: 0.01, Max: 0.2, Default: 0.06, Description: "Outline thickness"},
+			{Name: "backdrop", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Dark panel behind text"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableLowerThirdsSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableLowerThirds",
+		Description: "Broadcast-style lower third — title and subtitle on a glass panel with an accent bar, sliding in and out or held on screen",
+		Params: []ParamSchema{
+			{Name: "title", Type: "text", Default: "Enter text here", Description: "Title line"},
+			{Name: "subtitle", Type: "text", Default: "Enter text here", Description: "Subtitle line"},
+			{Name: "font", Type: "enum", Default: "sans", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "style", Type: "enum", Default: "glass", Description: "Panel style", EnumValues: []string{"glass", "solid", "gradient", "minimal"}},
+			{Name: "mode", Type: "enum", Default: "loop", Description: "Loop in/out or stay on", EnumValues: []string{"loop", "always"}},
+			{Name: "holdTime", Type: "float", Min: 1, Max: 15, Default: 5, Description: "Hold seconds (loop mode)"},
+			{Name: "speed", Type: "float", Min: 0.3, Max: 3, Default: 1, Description: "Animation speed"},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: -0.72, Description: "Horizontal position"},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: -0.6, Description: "Vertical position"},
+			{Name: "size", Type: "float", Min: 0.4, Max: 2, Default: 1, Description: "Overall size"},
+			{Name: "width", Type: "float", Min: 0.2, Max: 1, Default: 0.42, Description: "Panel width (screen fraction)"},
+			{Name: "accentTone", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Accent palette tone"},
+			{Name: "shine", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Shine sweep"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableType3DSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableType3D",
+		Description: "Extruded 3D text with beveled edges and real lighting — orbiting, tumbling, or held at a fixed angle you choose",
+		Params: []ParamSchema{
+			{Name: "text", Type: "text", Default: "Enter text here", Description: "Text to display"},
+			{Name: "font", Type: "enum", Default: "display", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "weight", Type: "enum", Default: "black", Description: "Font weight", EnumValues: fableWeightNames},
+			{Name: "letterSpacing", Type: "float", Min: 0, Max: 0.5, Default: 0.04, Description: "Letter spacing (em)"},
+			{Name: "motion", Type: "enum", Default: "swing", Description: "Camera motion (static = fixed angle)", EnumValues: []string{"static", "orbit", "tumble", "flip", "swing"}},
+			{Name: "motionSpeed", Type: "float", Min: 0, Max: 3, Default: 1, Description: "Motion speed"},
+			{Name: "rotX", Type: "float", Min: -80, Max: 80, Default: -8, Description: "Fixed tilt (degrees)"},
+			{Name: "rotY", Type: "float", Min: -80, Max: 80, Default: 16, Description: "Fixed turn (degrees)"},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Horizontal position"},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Vertical position"},
+			{Name: "size", Type: "float", Min: 0.1, Max: 2.5, Default: 1, Description: "Text size"},
+			{Name: "depth", Type: "float", Min: 0.02, Max: 0.5, Default: 0.16, Description: "Extrusion depth"},
+			{Name: "bevel", Type: "float", Min: 0, Max: 0.04, Default: 0.012, Description: "Edge bevel"},
+			{Name: "faceTone", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Face palette tone"},
+			{Name: "sideTone", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Side-wall palette tone"},
+			{Name: "metallic", Type: "float", Min: 0, Max: 1, Default: 0.55, Description: "Specular shine"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 0.4, Description: "Halo glow"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "chrome", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.15, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableTickerSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableTicker",
+		Description: "News-crawl strip — your message scrolling seamlessly with separator glyphs, either direction, over any pattern",
+		Params: []ParamSchema{
+			{Name: "text", Type: "text", Default: "Enter text here", Description: "Ticker message"},
+			{Name: "font", Type: "enum", Default: "sans", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "separator", Type: "enum", Default: "dot", Description: "Item separator", EnumValues: []string{"dot", "diamond", "slash", "star", "plus"}},
+			{Name: "scrollSpeed", Type: "float", Min: 0.1, Max: 3, Default: 1, Description: "Crawl speed"},
+			{Name: "direction", Type: "enum", Default: "left", Description: "Crawl direction", EnumValues: []string{"left", "right"}},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: -0.9, Description: "Vertical position"},
+			{Name: "height", Type: "float", Min: 0.03, Max: 0.18, Default: 0.062, Description: "Strip height"},
+			{Name: "barStyle", Type: "enum", Default: "solid", Description: "Bar style", EnumValues: []string{"solid", "glass", "gradient", "none"}},
+			{Name: "accentTone", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Accent palette tone"},
+			{Name: "edgeFade", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Edge fade"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableNeonSignSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableNeonSign",
+		Description: "Flickering neon-tube text — hot white cores in colored glass tubes with wide bloom, buzzing segments dropping out",
+		Params: []ParamSchema{
+			{Name: "text", Type: "text", Default: "Enter text here", Description: "Sign text"},
+			{Name: "font", Type: "enum", Default: "script", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Horizontal position"},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Vertical position"},
+			{Name: "size", Type: "float", Min: 0.05, Max: 1.5, Default: 0.32, Description: "Sign size"},
+			{Name: "rotation", Type: "float", Min: -180, Max: 180, Default: -4, Description: "Rotation (degrees)"},
+			{Name: "tubeWidth", Type: "float", Min: 0.02, Max: 0.2, Default: 0.07, Description: "Tube thickness"},
+			{Name: "tubeTone", Type: "float", Min: 0, Max: 1, Default: 0.85, Description: "Gas color (palette tone)"},
+			{Name: "glowSize", Type: "float", Min: 0.05, Max: 2, Default: 0.8, Description: "Bloom size"},
+			{Name: "flicker", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Flicker + dropout amount"},
+			{Name: "buzzSpeed", Type: "float", Min: 0.2, Max: 3, Default: 1, Description: "Buzz speed"},
+			{Name: "fillMode", Type: "enum", Default: "tube", Description: "Tube outline or filled glow", EnumValues: []string{"tube", "filled"}},
+			{Name: "backboard", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Dark backboard panel"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "candy", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.2, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableTitleCardSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableTitleCard",
+		Description: "Cinematic centered title with divider, letterbox bars, background dim, and a slow push-in — cycling or held",
+		Params: []ParamSchema{
+			{Name: "title", Type: "text", Default: "Enter text here", Description: "Title"},
+			{Name: "subtitle", Type: "text", Default: "Enter text here", Description: "Subtitle"},
+			{Name: "font", Type: "enum", Default: "serif", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "mode", Type: "enum", Default: "cycle", Description: "Fade cycle or stay on", EnumValues: []string{"cycle", "always"}},
+			{Name: "holdTime", Type: "float", Min: 1, Max: 15, Default: 5, Description: "Hold seconds (cycle mode)"},
+			{Name: "speed", Type: "float", Min: 0.3, Max: 3, Default: 1, Description: "Animation speed"},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Horizontal position"},
+			{Name: "posY", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Vertical position"},
+			{Name: "size", Type: "float", Min: 0.1, Max: 1.5, Default: 0.36, Description: "Card size"},
+			{Name: "zoomDrift", Type: "float", Min: 0, Max: 1, Default: 0.4, Description: "Cinematic push-in"},
+			{Name: "titleTone", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Accent palette tone"},
+			{Name: "divider", Type: "float", Min: 0, Max: 1, Default: 0.7, Description: "Divider line"},
+			{Name: "letterbox", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Letterbox bars"},
+			{Name: "dim", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Dim background during reveal"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
+		},
+	}
+}
+
+func FableCreditsSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableCredits",
+		Description: "Scrolling end credits — multi-line text rolling bottom to top with fade zones; | separates lines, * marks headings",
+		Params: []ParamSchema{
+			{Name: "text", Type: "text", Default: "Enter text here|Separate lines with the | character|*Headings start with an asterisk", Description: "Credits (| separates lines, * marks headings)"},
+			{Name: "font", Type: "enum", Default: "sans", Description: "Font family", EnumValues: fableFontNames},
+			{Name: "scrollSpeed", Type: "float", Min: 0.1, Max: 3, Default: 1, Description: "Roll speed"},
+			{Name: "posX", Type: "float", Min: -1, Max: 1, Default: 0, Description: "Horizontal position"},
+			{Name: "width", Type: "float", Min: 0.15, Max: 0.9, Default: 0.4, Description: "Column width (screen fraction)"},
+			{Name: "fadeZone", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Edge fade zones"},
+			{Name: "textTone", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Tint palette tone"},
+			{Name: "opacity", Type: "float", Min: 0, Max: 1, Default: 1, Description: "Overall opacity"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.1, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Vignette"},
 		},
 	}
 }
