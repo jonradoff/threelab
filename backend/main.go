@@ -309,20 +309,44 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	dir := string(h.staticDir.(http.Dir))
 
-	// Try to open the file
+	// index.html is the pointer to the current build's hashed assets. If a
+	// browser caches it, the next deploy strands that user on chunk files
+	// that no longer exist — so it must always revalidate.
+	serveIndex := func() {
+		w.Header().Set("Cache-Control", "no-cache")
+		http.ServeFile(w, r, dir+"/index.html")
+	}
+
+	// Hashed assets under /assets/ are immutable by construction. A missing
+	// one must be a real 404: falling back to index.html turns a stale-cache
+	// problem into an opaque "module MIME type text/html" error in the browser.
+	isAsset := strings.HasPrefix(path, "/assets/")
+
 	f, err := h.staticDir.Open(path)
 	if err != nil {
-		// File not found — serve index.html for SPA routing
-		http.ServeFile(w, r, dir+"/index.html")
+		if isAsset {
+			http.NotFound(w, r)
+			return
+		}
+		serveIndex()
 		return
 	}
 
 	stat, err := f.Stat()
 	f.Close()
 	if err != nil || stat.IsDir() {
-		http.ServeFile(w, r, dir+"/index.html")
+		if isAsset {
+			http.NotFound(w, r)
+			return
+		}
+		serveIndex()
 		return
 	}
 
+	if isAsset {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
 	http.FileServer(h.staticDir).ServeHTTP(w, r)
 }
