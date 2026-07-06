@@ -22,6 +22,7 @@ import { FABLE_TICKER_GENERATORS } from './fableTicker'
 import { FABLE_NEON_SIGN_GENERATORS } from './fableNeonSign'
 import { FABLE_TITLE_CARD_GENERATORS } from './fableTitleCard'
 import { FABLE_CREDITS_GENERATORS } from './fableCredits'
+import { FABLE_NEURAL_GENERATORS } from './fableNeural'
 
 // ─── Lissajous ────────────────────────────────────────────────────────────
 
@@ -1065,4 +1066,5 @@ export const BUILTIN_GENERATORS: CompoundGeneratorDef[] = [
   ...FABLE_NEON_SIGN_GENERATORS,
   ...FABLE_TITLE_CARD_GENERATORS,
   ...FABLE_CREDITS_GENERATORS,
+  ...FABLE_NEURAL_GENERATORS,
 ]

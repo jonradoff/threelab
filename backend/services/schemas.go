@@ -47,6 +47,7 @@ func AllPatternSchemas() []PatternSchema {
 		FableNeonSignSchema(),
 		FableTitleCardSchema(),
 		FableCreditsSchema(),
+		FableNeuralSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -529,6 +530,37 @@ func FableCymaticsSchema() PatternSchema {
 
 var fableFontNames = []string{"sans", "serif", "mono", "display", "script"}
 var fableWeightNames = []string{"light", "regular", "bold", "black"}
+
+func FableNeuralSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fableNeural",
+		Description: "A living neural network — forward-pass pulses race along glowing connections, neurons flare as the wave arrives, weights drift as it learns",
+		Params: []ParamSchema{
+			{Name: "layers", Type: "int", Min: 3, Max: 8, Default: 5, Description: "Network layers"},
+			{Name: "neurons", Type: "int", Min: 4, Max: 24, Default: 11, Description: "Max neurons per layer"},
+			{Name: "irregular", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Layer size variation"},
+			{Name: "passSpeed", Type: "float", Min: 0.1, Max: 3, Default: 0.9, Description: "Forward-pass rate"},
+			{Name: "pulseWidth", Type: "float", Min: 0.1, Max: 2, Default: 0.8, Description: "Pulse packet length"},
+			{Name: "pulseIntensity", Type: "float", Min: 0, Max: 3, Default: 1.3, Description: "Pulse brightness"},
+			{Name: "edgeBrightness", Type: "float", Min: 0, Max: 2, Default: 0.8, Description: "Idle connection brightness"},
+			{Name: "edgeThickness", Type: "float", Min: 0.5, Max: 3, Default: 1, Description: "Connection thickness"},
+			{Name: "learnDrift", Type: "float", Min: 0, Max: 2, Default: 0.5, Description: "Weight drift (learning)"},
+			{Name: "nodeSize", Type: "float", Min: 0.5, Max: 2, Default: 1, Description: "Neuron size"},
+			{Name: "glow", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Glow bloom"},
+			{Name: "sparkle", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Scintillation"},
+			{Name: "wobble", Type: "float", Min: 0, Max: 1, Default: 0.35, Description: "Organic node drift"},
+			{Name: "spread", Type: "float", Min: 0.5, Max: 1, Default: 0.85, Description: "Network screen coverage"},
+			{Name: "posTone", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Positive-weight tone"},
+			{Name: "negTone", Type: "float", Min: 0, Max: 1, Default: 0.16, Description: "Negative-weight tone"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.15, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.25, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.45, Description: "Vignette"},
+		},
+	}
+}
 
 func FableTypeSchema() PatternSchema {
 	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}

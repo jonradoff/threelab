@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-06
+
+### Added
+- **Fable Neural** — a living neural network: forward-pass waves sweep through a multi-layer perceptron as comet pulses racing along eased connection curves; neurons flare when the wave arrives and slowly cool; edge weights drift over time like the net is learning (positive/negative weights in different palette tones); energy shimmer on idle lines and scintillation sparkle. Per-pixel cost is O(neurons) — the eased edge curve is inverted per pixel to find the 2 nearest edges instead of testing all N².
+
 ## 2026-07-04 (third drop) — text motion graphics
 
 ### Added — text overlay infrastructure
