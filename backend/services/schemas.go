@@ -48,6 +48,7 @@ func AllPatternSchemas() []PatternSchema {
 		FableTitleCardSchema(),
 		FableCreditsSchema(),
 		FableNeuralSchema(),
+		FablePlanetSchema(),
 		FlowFieldSchema(),
 		SpaceFillingCurveSchema(),
 		ReactionDiffusionSchema(),
@@ -530,6 +531,44 @@ func FableCymaticsSchema() PatternSchema {
 
 var fableFontNames = []string{"sans", "serif", "mono", "display", "script"}
 var fableWeightNames = []string{"light", "regular", "bold", "black"}
+
+func FablePlanetSchema() PatternSchema {
+	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}
+	return PatternSchema{
+		PatternType: "fablePlanet",
+		Description: "A cinematic living world — scattering atmosphere with a sunset terminator, cyclone weather, city lights, aurora, rings, moons with eclipses, and seven world types",
+		Params: []ParamSchema{
+			{Name: "planetType", Type: "enum", Default: "terran", Description: "World type", EnumValues: []string{"terran", "desert", "ice", "ocean", "lava", "gasgiant", "alien"}},
+			{Name: "seed", Type: "float", Min: 0, Max: 100, Default: 42, Description: "World seed"},
+			{Name: "oceanLevel", Type: "float", Min: 0, Max: 1, Default: 0.62, Description: "Ocean coverage"},
+			{Name: "mountainHeight", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Mountain ranges"},
+			{Name: "iceCaps", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Polar ice extent"},
+			{Name: "seasonSpeed", Type: "float", Min: 0, Max: 2, Default: 0.3, Description: "Season rate (0 = frozen climate)"},
+			{Name: "cloudCover", Type: "float", Min: 0, Max: 1, Default: 0.55, Description: "Cloud coverage"},
+			{Name: "windSpeed", Type: "float", Min: 0, Max: 2, Default: 0.6, Description: "Trade-wind speed"},
+			{Name: "stormActivity", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Cyclone strength"},
+			{Name: "lightning", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Night-side lightning"},
+			{Name: "cityLights", Type: "float", Min: 0, Max: 1, Default: 0.6, Description: "Civilization lights"},
+			{Name: "aurora", Type: "float", Min: 0, Max: 1, Default: 0.5, Description: "Polar aurora"},
+			{Name: "atmosphere", Type: "float", Min: 0, Max: 2, Default: 1, Description: "Atmosphere density"},
+			{Name: "rings", Type: "float", Min: 0, Max: 1, Default: 0, Description: "Ring system"},
+			{Name: "ringTilt", Type: "float", Min: -45, Max: 45, Default: 18, Description: "Ring tilt (degrees)"},
+			{Name: "moons", Type: "int", Min: 0, Max: 2, Default: 1, Description: "Moons"},
+			{Name: "axialTilt", Type: "float", Min: 0, Max: 40, Default: 18, Description: "Axial tilt (degrees)"},
+			{Name: "rotationSpeed", Type: "float", Min: 0, Max: 3, Default: 0.6, Description: "Day length (spin speed)"},
+			{Name: "camera", Type: "enum", Default: "orbit", Description: "Camera move (static = fixed)", EnumValues: []string{"orbit", "approach", "static"}},
+			{Name: "viewTilt", Type: "float", Min: -60, Max: 60, Default: 8, Description: "View tilt (degrees)"},
+			{Name: "viewTurn", Type: "float", Min: -180, Max: 180, Default: 0, Description: "View turn (degrees)"},
+			{Name: "zoom", Type: "float", Min: 0.3, Max: 2.5, Default: 1, Description: "Zoom"},
+			{Name: "lightAngle", Type: "float", Min: -180, Max: 180, Default: 35, Description: "Sun direction"},
+			{Name: "palette", Type: "enum", Default: "aurora", Description: "Palette (alien/gas worlds)", EnumValues: fablePalettes},
+			{Name: "colorHue", Type: "float", Min: 0, Max: 360, Default: 0, Description: "Palette hue shift"},
+			{Name: "exposure", Type: "float", Min: 0.3, Max: 3, Default: 1.15, Description: "Exposure"},
+			{Name: "grain", Type: "float", Min: 0, Max: 1, Default: 0.2, Description: "Film grain"},
+			{Name: "vignette", Type: "float", Min: 0, Max: 1, Default: 0.3, Description: "Vignette"},
+		},
+	}
+}
 
 func FableNeuralSchema() PatternSchema {
 	fablePalettes := []string{"aurora", "ember", "abyss", "ultraviolet", "chrome", "candy"}

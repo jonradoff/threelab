@@ -406,6 +406,7 @@ function buildFallbackSchemas(setPatternSchemas: (schemas: Record<string, Patter
         'Fable Title Card': 'fableTitleCard',
         'Fable Credits Roll': 'fableCredits',
         'Fable Neural': 'fableNeural',
+        'Fable Planet': 'fablePlanet',
         'Kaleidoscope': 'kaleidoscope',
         'Slime Mold': 'slimeMold',
         'Starfield': 'starfield',

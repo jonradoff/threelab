@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-06 (Fable Planet)
+
+### Added
+- **Fable Planet** — the cinematic successor to Planet: analytic ray-traced world with Rayleigh/Mie-flavored limb scattering and a sunset ring at the terminator; tectonic-flavored terrain with biomes by latitude/altitude/moisture; trade-wind cloud bands warped by spiral cyclones with self-shadowing and night-side lightning; coastal city lights that fade up through twilight; polar aurora curtains; a ring system exchanging shadows with the planet; up to two moons with true eclipse shadows; seasons at a controllable rate (0 = frozen climate); seven world types (terran/desert/ice/ocean/lava/gas giant/alien); orbit/approach/static cameras. Space is transparent — layer a starfield behind it.
+
 ## 2026-07-06
 
 ### Added
